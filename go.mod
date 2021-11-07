@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/sethvargo/go-password v0.2.0
-	github.com/spf13/cobra v1.1.3
+	github.com/spf13/cobra v1.2.1
 	go.uber.org/zap v1.19.1
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	k8s.io/api v0.21.3
