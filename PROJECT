@@ -1,48 +1,82 @@
 domain: cosmo-workspace.github.io
 layout:
-- go.kubebuilder.io/v3
+  - go.kubebuilder.io/v3
 projectName: cosmo
 repo: github.com/cosmo-workspace/cosmo
 resources:
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: cosmo-workspace.github.io
-  kind: Instance
-  path: github.com/cosmo-workspace/cosmo/api/v1alpha1
-  version: v1alpha1
-  webhooks:
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-  domain: cosmo-workspace.github.io
-  kind: Template
-  path: github.com/cosmo-workspace/cosmo/api/v1alpha1
-  version: v1alpha1
-- api:
-    crdVersion: v1
-    namespaced: true
-  controller: true
-  domain: cosmo-workspace.github.io
-  kind: Workspace
-  path: github.com/cosmo-workspace/cosmo/api/v1alpha1
-  version: v1alpha1
-  webhooks:
-    defaulting: true
-    validation: true
-    webhookVersion: v1
-- api:
-    crdVersion: v1
-  controller: true
-  domain: cosmo-workspace.github.io
-  kind: User
-  path: github.com/cosmo-workspace/cosmo/api/v1alpha1
-  version: v1alpha1
-  webhooks:
-    defaulting: true
-    validation: true
-    webhookVersion: v1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: cosmo-workspace.github.io
+    kind: Instance
+    path: github.com/cosmo-workspace/cosmo/api/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - api:
+      crdVersion: v1
+    controller: true
+    domain: cosmo-workspace.github.io
+    kind: Template
+    path: github.com/cosmo-workspace/cosmo/api/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - api:
+      crdVersion: v1
+    controller: true
+    domain: cosmo-workspace.github.io
+    kind: ClusterInstance
+    path: github.com/cosmo-workspace/cosmo/api/core/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - api:
+      crdVersion: v1
+    domain: cosmo-workspace.github.io
+    kind: ClusterTemplate
+    path: github.com/cosmo-workspace/cosmo/api/core/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - api:
+      crdVersion: v1
+      namespaced: true
+    controller: true
+    domain: cosmo-workspace.github.io
+    kind: Workspace
+    path: github.com/cosmo-workspace/cosmo/api/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - api:
+      crdVersion: v1
+    controller: true
+    domain: cosmo-workspace.github.io
+    kind: User
+    path: github.com/cosmo-workspace/cosmo/api/v1alpha1
+    version: v1alpha1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
+  - group: core
+    kind: Pod
+    path: k8s.io/api/core/v1
+    version: v1
+    webhooks:
+      defaulting: true
+      validation: true
+      webhookVersion: v1
 version: "3"

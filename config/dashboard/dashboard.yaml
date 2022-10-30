@@ -8,6 +8,10 @@ spec:
     port: 8443
     protocol: TCP
     targetPort: 8443
+  - name: webhook
+    port: 9443
+    protocol: TCP
+    targetPort: 9443
   type: ClusterIP
 ---
 apiVersion: apps/v1
@@ -26,6 +30,7 @@ spec:
         - /app/dashboard
         args:
         - --port=8443
+        - --webhook-port=9443
         - --maxage-minutes=180
         - --zap-log-level=info
         - --tls-key=/app/cert/tls.key

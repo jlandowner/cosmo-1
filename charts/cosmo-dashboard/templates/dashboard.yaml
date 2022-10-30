@@ -11,6 +11,10 @@ spec:
     port: {{ .Values.service.port }}
     protocol: TCP
     targetPort: {{ .Values.service.port }}
+  - name: webhook
+    port: {{ .Values.service.webhookPort }}
+    protocol: TCP
+    targetPort: {{ .Values.service.webhookPort }}
   selector:
     {{- include "cosmo-dashboard.selectorLabels" . | nindent 4 }}
   type: {{ .Values.service.type }}
@@ -42,6 +46,7 @@ spec:
       containers:
       - args:
         - --port={{ .Values.service.port }}
+        - --webhook-port={{ .Values.service.webhookPort }}
         - --maxage-minutes={{ .Values.maxMinutes }}
         - --zap-log-level={{ .Values.logLevel }}
         - --zap-time-encoding={{ .Values.logTimeEncoding }}

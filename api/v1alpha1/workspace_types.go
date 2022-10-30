@@ -10,6 +10,13 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+const (
+	// EnvServerCA is a environment variable key injected in cosmo workspace pod. which is for the base64-encoded cosmo server's CA cert
+	EnvServerCA string = "COSMO_SERVER_CA"
+	// EnvServerEndpoint is a environment variable key injected in cosmo workspace pod. which is for the cosmo server's endpoint
+	EnvServerEndpoint string = "COSMO_SERVER_ENDPOINT"
+)
+
 func init() {
 	SchemeBuilder.Register(&Workspace{}, &WorkspaceList{})
 }

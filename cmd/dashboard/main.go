@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -16,13 +18,10 @@ import (
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/internal/dashboard"
+	webhooks "github.com/cosmo-workspace/cosmo/internal/webhooks/dashboard"
 	"github.com/cosmo-workspace/cosmo/pkg/auth"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
-)
-
-const (
-	fieldManager string = "cosmo-dashboard"
 )
 
 var (
@@ -41,22 +40,22 @@ type options struct {
 	StaticFileDir           string
 	ResponseTimeoutSeconds  int64
 	GracefulShutdownSeconds int64
-	TLSPrivateKeyPath       string
-	TLSCertPath             string
 	Insecure                bool
 	ServerPort              int
 	MaxAgeMinutes           int
+	WebhookPort             int
+	CertDir                 string
 }
 
 func main() {
 	flag.Int64Var(&o.ResponseTimeoutSeconds, "timeout-seconds", 3, "Timeout seconds for response")
 	flag.Int64Var(&o.GracefulShutdownSeconds, "graceful-shutdown-seconds", 10, "Graceful shutdown seconds")
 	flag.StringVar(&o.StaticFileDir, "serve-dir", "/app/public", "Static file dir to serve")
-	flag.StringVar(&o.TLSPrivateKeyPath, "tls-key", "tls.key", "TLS key file path")
-	flag.StringVar(&o.TLSCertPath, "tls-cert", "tls.crt", "TLS certificate file path")
 	flag.BoolVar(&o.Insecure, "insecure", false, "start http server not https server")
 	flag.IntVar(&o.ServerPort, "port", 8443, "Port for dashboard server")
+	flag.IntVar(&o.WebhookPort, "webhook-port", 9443, "Port for webhook server")
 	flag.IntVar(&o.MaxAgeMinutes, "maxage-minutes", 720, "session maxage minutes")
+	flag.StringVar(&o.CertDir, "cert-dir", "/tmp/k8s-webhook-server/serving-certs", "cert directory which has tls.key, tls.crt, ca.crt")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -72,12 +71,24 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: "0",
-		Port:               9443,
+		Port:               o.WebhookPort,
 		LeaderElection:     false,
+		CertDir:            o.CertDir,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
+	}
+
+	if !o.Insecure {
+		if err = (&webhooks.PodWebhook{
+			RootCASecretKey: types.NamespacedName{Name: "cosmo-dashboard-cert", Namespace: "cosmo-system"},
+		}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create pod webhook", "webhook", "Pod")
+			os.Exit(1)
+		}
+	} else {
+		setupLog.Info("WARNING: webhook is disabled when insecure")
 	}
 
 	// Setup server
@@ -95,8 +106,8 @@ func main() {
 		Port:                o.ServerPort,
 		MaxAgeSeconds:       60 * o.MaxAgeMinutes,
 		SessionName:         "cosmo-dashboard",
-		TLSPrivateKeyPath:   o.TLSPrivateKeyPath,
-		TLSCertPath:         o.TLSCertPath,
+		TLSPrivateKeyPath:   filepath.Join(o.CertDir, "tls.key"),
+		TLSCertPath:         filepath.Join(o.CertDir, "tls.crt"),
 		Insecure:            o.Insecure,
 		Authorizers:         auths,
 	})

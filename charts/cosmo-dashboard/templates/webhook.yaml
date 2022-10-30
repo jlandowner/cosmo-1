@@ -1,0 +1,33 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  {{- if $.Values.enableCertManager }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/cosmo-dashboard-cert
+  {{- end }}
+  labels:
+    {{- include "cosmo-controller-manager.labels" . | nindent 4 }}
+  name: cosmo-dashboard-mutating-webhook
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ if not $.Values.enableCertManager -}}{{ $tls.caCert }}{{- else -}}Cg=={{ end }}
+    service:
+      name: cosmo-dashboard
+      namespace: {{ .Release.Namespace }}
+      path: /mutate-core-v1-pod
+      port: 9443
+  failurePolicy: Fail
+  name: mpod.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - pods
+  sideEffects: None

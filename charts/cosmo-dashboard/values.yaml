@@ -39,6 +39,7 @@ securityContext:
 service:
   type: ClusterIP
   port: 8443
+  webhookPort: 9443
 
 ingress:
   enabled: false
