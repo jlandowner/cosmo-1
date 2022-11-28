@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	wsv1alpha1 "github.com/cosmo-workspace/cosmo/api/workspace/v1alpha1"
+	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 )
 
@@ -34,8 +35,13 @@ type PodWebhook struct {
 	RootCASecretKey types.NamespacedName
 	// RootCASecretDataKey is a key of root ca data key. if not set, uses "ca.crt"
 	RootCASecretDataKey string
+	// Hostname is a hostname for API Endpoint
+	Hostname string
+	// Port is a port for API Endpoint
+	Port int
 
-	decoder *admission.Decoder
+	endpoint string
+	decoder  *admission.Decoder
 }
 
 func (r *PodWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -48,6 +54,11 @@ func (r *PodWebhook) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	if _, err := r.GetCA(context.TODO()); err != nil {
 		return fmt.Errorf("failed to get cert: %w", err)
 	}
+
+	r.endpoint = (&url.URL{
+		Scheme: "https",
+		Host:   fmt.Sprintf("%s:%d", r.Hostname, r.Port),
+	}).String()
 
 	mgr.GetWebhookServer().Register(
 		"/mutate-core-v1-pod",
@@ -87,7 +98,11 @@ func (r *PodWebhook) Default(ctx context.Context, pod *corev1.Pod) error {
 		if cont.Env == nil {
 			cont.Env = make([]corev1.EnvVar, 0)
 		}
-		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env, corev1.EnvVar{Name: wsv1alpha1.EnvServerCA, Value: b64ca})
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env,
+			corev1.EnvVar{Name: cosmov1alpha1.EnvServerCA, Value: b64ca})
+
+		pod.Spec.Containers[i].Env = append(pod.Spec.Containers[i].Env,
+			corev1.EnvVar{Name: cosmov1alpha1.EnvServerEndpoint, Value: r.endpoint})
 	}
 
 	return nil
