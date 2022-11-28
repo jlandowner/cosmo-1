@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
+func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
 	netruleCmd := &cobra.Command{
 		Use:   "networkrule",
 		Short: "Manipulate NetworkRule of Workspace resource",
@@ -14,11 +14,6 @@ Workspace network rule utility command
 `,
 		Aliases: []string{"netrule", "net"},
 	}
-
-	o := cmdutil.NewUserNamespacedCliOptions(co)
-
-	netruleCmd.PersistentFlags().StringVarP(&o.User, "user", "u", "", "user name")
-	netruleCmd.PersistentFlags().StringVarP(&o.Namespace, "namespace", "n", "", "namespace")
 
 	netruleCmd.AddCommand(CreateCmd(&cobra.Command{
 		Use:     "create NETWORK_RULE_NAME --workspace WORKSPACE_NAME --port PORT_NUMBER",

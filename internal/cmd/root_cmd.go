@@ -1,6 +1,3 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -12,6 +9,7 @@ import (
 	"github.com/cosmo-workspace/cosmo/internal/cmd/create"
 	del "github.com/cosmo-workspace/cosmo/internal/cmd/delete"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/get"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/login"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/netrule"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/run"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/stop"
@@ -25,9 +23,9 @@ func NewRootCmd(o *cmdutil.CliOptions) *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:   "cosmoctl",
-		Short: "Command line tool to manipulate comso",
+		Short: "Command line tool to manipulate cosmo resources",
 		Long: `
-Command line tool to manipulate comso
+Command line tool to manipulate cosmo resources
 Complete documentation is available at http://github.com/cosmo-workspace/cosmo
 
 MIT 2022 cosmo-workspace/cosmo
@@ -37,8 +35,6 @@ MIT 2022 cosmo-workspace/cosmo
 	rootCmd.SetIn(o.In)
 	rootCmd.SetOut(o.Out)
 	rootCmd.SetErr(o.ErrOut)
-	rootCmd.PersistentFlags().StringVar(&o.KubeConfigPath, "kubeconfig", "", "kubeconfig file path (default: $HOME/.kube/config)")
-	rootCmd.PersistentFlags().StringVar(&o.KubeContext, "context", "", "kube-context (default: current context)")
 	rootCmd.PersistentFlags().IntVarP(&o.LogLevel, "verbose", "v", -1, "log level. -1:DISABLED, 0:INFO, 1:DEBUG, 2:ALL")
 
 	versionCmd := &cobra.Command{
@@ -60,6 +56,8 @@ MIT 2022 cosmo-workspace/cosmo
 	del.AddCommand(rootCmd, o)
 	run.AddCommand(rootCmd, o)
 	stop.AddCommand(rootCmd, o)
+
+	login.AddCommand(rootCmd, o)
 
 	return rootCmd
 }

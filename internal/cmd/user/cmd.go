@@ -22,14 +22,14 @@ User is actually a Kubernetes Namespace for running Workspaces.
 		Short: "Reset user password",
 	}, o))
 	userCmd.AddCommand(CreateCmd(&cobra.Command{
-		Use:   "create USER_NAME --role cosmo-admin",
+		Use:   "create USER_NAME",
 		Short: "Create user",
 	}, o))
 	userCmd.AddCommand(GetCmd(&cobra.Command{
-		Use:   "get",
+		Use:   "get [USER_NAME]",
 		Short: "Get users",
 		Long: `
-Get Users. This command is similar to "kubectl get namespace"
+Get Users. This command is similar to "kubectl get users"
 `,
 	}, o))
 	userCmd.AddCommand(DeleteCmd(&cobra.Command{

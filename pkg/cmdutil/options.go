@@ -2,166 +2,216 @@ package cmdutil
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 )
 
-var (
-	scheme = runtime.NewScheme()
+type GetOutputFormat string
+
+const (
+	GetOutputFormatWide GetOutputFormat = "wide"
+	GetOutputFormatJSON GetOutputFormat = "json"
 )
 
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(cosmov1alpha1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
+var HelpGetOutputFormat string = fmt.Sprintf("available: [%s, %s]", GetOutputFormatWide, GetOutputFormatJSON)
+
+func (o GetOutputFormat) String() string {
+	return string(o)
 }
 
+func (o GetOutputFormat) Validate() error {
+	switch o {
+	case GetOutputFormatWide, GetOutputFormatJSON:
+		return nil
+	case "":
+		return nil
+	default:
+		return fmt.Errorf("invalid output format '%s' %s", o, HelpGetOutputFormat)
+	}
+}
+
+// CliConfig has client common infomation to communicate with the server
+// which is loaded by incluster auto completion or from login config file
+type CliConfig struct {
+	LoginUser      string `json:"user,omitempty"`
+	ServerCA       []byte `json:"ca,omitempty"`
+	ServerEndpoint string `json:"endpoint,omitempty"`
+	Token          string `json:"token,omitempty"`
+}
+
+func (c *CliConfig) CompleteInCluster() error {
+	var err error
+	c.LoginUser, err = loadInclusterUserName()
+	if err != nil {
+		return err
+	}
+	c.ServerEndpoint = os.Getenv(cosmov1alpha1.EnvServerEndpoint)
+	if c.ServerEndpoint == "" {
+		return fmt.Errorf("failed to get env %s", cosmov1alpha1.EnvServerEndpoint)
+	}
+	c.ServerCA, err = loadInclusterServerCA()
+	if err != nil {
+		return err
+	}
+	c.Token, err = loadInclusterServiceAccountToken()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func loadInclusterUserName() (string, error) {
+	const inclusterNamespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	ns, err := ioutil.ReadFile(inclusterNamespaceFile)
+	if len(ns) == 0 || err != nil {
+		return "", fmt.Errorf("failed to load incluster namespace: %w", err)
+	}
+	userName := cosmov1alpha1.UserNameByNamespace(string(ns))
+	if userName == "" {
+		return "", fmt.Errorf("not cosmo user namespace: %s", ns)
+	}
+	return userName, nil
+}
+
+func loadInclusterServerCA() ([]byte, error) {
+	v := os.Getenv(cosmov1alpha1.EnvServerCA)
+	if v == "" {
+		return nil, errors.New("env not found")
+	}
+	return base64.RawStdEncoding.DecodeString(v)
+}
+
+func loadInclusterServiceAccountToken() (string, error) {
+	const inclusterTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	token, err := ioutil.ReadFile(inclusterTokenFile)
+	if len(token) == 0 || err != nil {
+		return "", fmt.Errorf("failed to load incluster token: %w", err)
+	}
+	return string(token), nil
+}
+
+func (c *CliConfig) CompleteByConfigFile(filepath string) error {
+	f, err := ioutil.ReadFile(filepath)
+	if len(f) == 0 || err != nil {
+		return fmt.Errorf("failed to read file: %w", err)
+	}
+	buf := make([]byte, base64.RawStdEncoding.DecodedLen(len(f)))
+	if n, err := base64.RawStdEncoding.Decode(buf, f); n == 0 || err != nil {
+		return fmt.Errorf("failed to decode file: %w", err)
+	}
+
+	if err = json.Unmarshal(f, c); err != nil {
+		return fmt.Errorf("failed to decode string: %w", err)
+	}
+	return nil
+}
+
+func (c *CliConfig) Write(filename string) error {
+	r, err := json.Marshal(c)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, base64.RawStdEncoding.EncodedLen(len(r)))
+	base64.RawStdEncoding.Encode(buf, r)
+	return os.WriteFile(filename, buf, 0600)
+}
+
+// CliOptions is a common infomations for cli
 type CliOptions struct {
-	KubeConfigPath string
-	KubeContext    string
-	LogLevel       int
-	In             io.Reader
-	Out            io.Writer
-	ErrOut         io.Writer
+	*CliConfig
+
+	LogLevel          int
+	CliConfigFilePath string
+	Insecure          bool
 
 	Ctx    context.Context
+	Client connect.HTTPClient
 	Logr   *clog.Logger
-	Client *kosmo.Client
-	Scheme *runtime.Scheme
+	In     io.Reader
+	Out    io.Writer
+	ErrOut io.Writer
 }
 
-type NamespacedCliOptions struct {
-	*CliOptions
-	Namespace    string
-	AllNamespace bool
-}
-
-type UserNamespacedCliOptions struct {
-	*NamespacedCliOptions
-	User string
+func (o *CliOptions) AddFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().IntVarP(&o.LogLevel, "verbose", "v", -1, "log level. -1:DISABLED, 0:INFO, 1:DEBUG, 2:ALL")
+	cmd.PersistentFlags().StringVar(&o.CliConfigFilePath, "config", "$HOME/.cosmoctl", "config file path")
+	cmd.PersistentFlags().BoolVar(&o.Insecure, "insecure", false, "use insecure client")
 }
 
 func NewCliOptions() *CliOptions {
 	ctx := context.TODO()
-	return &CliOptions{Ctx: ctx}
+	return &CliOptions{Ctx: ctx, CliConfig: &CliConfig{}, In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr}
 }
 
-func NewNamespacedCliOptions(o *CliOptions) *NamespacedCliOptions {
-	return &NamespacedCliOptions{CliOptions: o}
-}
-
-func NewUserNamespacedCliOptions(o *CliOptions) *UserNamespacedCliOptions {
-	return &UserNamespacedCliOptions{NamespacedCliOptions: NewNamespacedCliOptions(o)}
-}
-
-func (o *CliOptions) Validate(cmd *cobra.Command, args []string) error {
-	return nil
-}
-
-func (o *CliOptions) Complete(cmd *cobra.Command, args []string) error {
+func (o *CliOptions) CompleteLogger() {
 	if o.LogLevel >= 0 {
 		opt := zap.Options{
 			Development: true,
 			Level:       zapcore.Level(-o.LogLevel),
+			TimeEncoder: zapcore.ISO8601TimeEncoder,
 		}
 		o.Logr = clog.NewLogger(zap.New(zap.UseFlagOptions(&opt)))
 		o.Ctx = clog.IntoContext(o.Ctx, o.Logr)
 	} else {
 		o.Logr = clog.NewLogger(logr.Discard())
 	}
-	debug := o.Logr.WithCaller().DebugAll()
+}
 
-	if o.Client == nil {
-		cfgFlg := genericclioptions.NewConfigFlags(true)
-		debug.Info("kubeconfigs", "kubeConfigPath", o.KubeConfigPath, "kubeContext", o.KubeContext)
+func (o *CliOptions) Complete(cmd *cobra.Command, args []string) error {
+	// Complete Logger
+	o.CompleteLogger()
 
-		if o.KubeConfigPath != "" {
-			cfgFlg.KubeConfig = &o.KubeConfigPath
-		}
-		if o.KubeContext != "" {
-			cfgFlg.Context = &o.KubeContext
-		}
+	// Complete CliConfig
+	// First, load config from file
+	// If failed to load config file, then load incluster config
+	// If both failed, return err
+	if err := o.CliConfig.CompleteByConfigFile(o.CliConfigFilePath); err != nil {
+		err = fmt.Errorf("failed to load config file %s: %w", o.CliConfigFilePath, err)
 
-		cfg, err := cfgFlg.ToRESTConfig()
-		if err != nil {
-			return err
+		if ierr := o.CliConfig.CompleteInCluster(); ierr != nil {
+			return fmt.Errorf("failed to load config %v: %w", ierr, err)
 		}
-		debug.Info("RestConfig", "cfg", cfg)
+	}
 
-		baseclient, err := kosmo.NewClientByRestConfig(cfg, scheme)
-		if err != nil {
-			return err
-		}
-		o.Client = &baseclient
-		o.Scheme = scheme
+	// Complete TLS Client
+	caPool := x509.NewCertPool()
+	caPool.AppendCertsFromPEM(o.ServerCA)
+
+	o.Client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caPool,
+			},
+		},
 	}
 
 	return nil
 }
 
-func (o *NamespacedCliOptions) Validate(cmd *cobra.Command, args []string) error {
-	if o.AllNamespace && o.Namespace != "" {
-		return errors.New("--all-namespaces connot be used with --namespace")
-	}
-	return o.CliOptions.Validate(cmd, args)
-}
-
-func (o *NamespacedCliOptions) Complete(cmd *cobra.Command, args []string) error {
-	if !o.AllNamespace && o.Namespace == "" {
-		cfg, err := GetKubeConfig(o.KubeConfigPath)
-		if err != nil && !os.IsNotExist(err) {
-			return err
-		}
-		o.Namespace = GetDefaultNamespace(cfg, o.KubeContext)
-		if o.Namespace == "" {
-			return errors.New("failed to get default namespace")
-		}
-	}
-	return o.CliOptions.Complete(cmd, args)
-}
-
-func (o *UserNamespacedCliOptions) Validate(cmd *cobra.Command, args []string) error {
-	if o.User != "" && o.Namespace != "" {
-		return errors.New("--user and --namespace connot be used at the same time")
-	}
-	if o.AllNamespace && (o.Namespace != "" || o.User != "") {
-		return errors.New("--all-namespaces connot be used with --namespace or --user")
-	}
-	return o.NamespacedCliOptions.Validate(cmd, args)
-}
-
-func (o *UserNamespacedCliOptions) Complete(cmd *cobra.Command, args []string) error {
-	if !o.AllNamespace {
-		if o.Namespace == "" && o.User != "" {
-			o.Namespace = cosmov1alpha1.UserNamespace(o.User)
-		}
-	}
-	if err := o.NamespacedCliOptions.Complete(cmd, args); err != nil {
-		return err
-	}
-	if !o.AllNamespace {
-		if o.Namespace != "" && o.User == "" {
-			userName := cosmov1alpha1.UserNameByNamespace(o.Namespace)
-			if userName == "" {
-				return fmt.Errorf("namespace %s is not cosmo user's namespace", o.Namespace)
-			}
-			o.User = userName
-		}
-	}
+func (o *CliOptions) Validate(cmd *cobra.Command, args []string) error {
 	return nil
+}
+
+// NewConnectRequestWithAuth wraps a connect.NewRequest with authorization header
+func NewConnectRequestWithAuth[T any](token string, message *T) *connect.Request[T] {
+	req := connect.NewRequest(message)
+	req.Header().Add("Authorization", token)
+	return req
 }

@@ -1,18 +1,19 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type CreateOption struct {
@@ -25,7 +26,7 @@ type CreateOption struct {
 	Addons        []string
 	ClusterAddons []string
 
-	userAddons []cosmov1alpha1.UserAddon
+	userAddons []*dashv1alpha1.UserAddons
 }
 
 func CreateCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
@@ -79,7 +80,7 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 		o.Role = cosmov1alpha1.UserAdminRole.String()
 	}
 
-	o.userAddons = make([]cosmov1alpha1.UserAddon, 0, len(o.Addons)+len(o.ClusterAddons))
+	o.userAddons = make([]*dashv1alpha1.UserAddons, 0, len(o.Addons)+len(o.ClusterAddons))
 	if len(o.Addons) > 0 {
 		userAddons, err := parseUserAddonOptions(o.Addons, false)
 		if err != nil {
@@ -98,14 +99,14 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func parseUserAddonOptions(rawAddonOptionArray []string, isClusterScope bool) ([]cosmov1alpha1.UserAddon, error) {
+func parseUserAddonOptions(rawAddonOptionArray []string, isClusterScope bool) ([]*dashv1alpha1.UserAddons, error) {
 	// format
 	//   TEMPLATE_NAME
 	//   TEMPLATE_NAME,KEY1:XXX,KEY2:YYY ZZZ,KEY3:
 	r1 := regexp.MustCompile(`^[^: ,]+(,([^: ,]+):([^,]*))*$`)
 	r2 := regexp.MustCompile(`^([^: ,]+):([^,]*)$`)
 
-	userAddons := make([]cosmov1alpha1.UserAddon, 0, len(rawAddonOptionArray))
+	userAddons := make([]*dashv1alpha1.UserAddons, 0, len(rawAddonOptionArray))
 
 	for _, addonParm := range rawAddonOptionArray {
 		if !r1.MatchString(addonParm) {
@@ -114,12 +115,10 @@ func parseUserAddonOptions(rawAddonOptionArray []string, isClusterScope bool) ([
 
 		addonSplits := strings.Split(addonParm, ",")
 
-		userAddon := cosmov1alpha1.UserAddon{
-			Template: cosmov1alpha1.UserAddonTemplateRef{
-				Name:          addonSplits[0],
-				ClusterScoped: isClusterScope,
-			},
-			Vars: make(map[string]string, len(addonSplits)-1),
+		userAddon := &dashv1alpha1.UserAddons{
+			Template:      addonSplits[0],
+			ClusterScoped: isClusterScope,
+			Vars:          make(map[string]string, len(addonSplits)-1),
 		}
 
 		for _, k_v := range addonSplits[1:] {
@@ -132,20 +131,25 @@ func parseUserAddonOptions(rawAddonOptionArray []string, isClusterScope bool) ([
 }
 
 func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	log := o.Logr.WithName("create_user")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	if _, err := o.Client.CreateUser(ctx, o.UserName, o.DisplayName, o.Role, "", o.userAddons); err != nil {
-		return err
-	}
+	c := dashboardv1alpha1connect.NewUserServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	defaultPassword, err := o.Client.GetDefaultPasswordAwait(ctx, o.UserName)
+	res, err := c.CreateUser(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashv1alpha1.CreateUserRequest{
+			UserName:    o.UserName,
+			DisplayName: o.DisplayName,
+			Role:        o.Role,
+			AuthType:    cosmov1alpha1.UserAuthTypePasswordSecert.String(),
+			Addons:      o.userAddons,
+		}))
 	if err != nil {
 		return err
 	}
+	log.Debug().Info("response: %v", res)
 
 	cmdutil.PrintfColorInfo(o.Out, "Successfully created user %s\n", o.UserName)
-	fmt.Fprintln(o.Out, "Default password:", *defaultPassword)
+	fmt.Fprintln(o.Out, "Default password:", res.Msg.User.DefaultPassword)
 	return nil
 }

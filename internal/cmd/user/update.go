@@ -1,17 +1,13 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
-	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
-	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 )
 
 type updateOption struct {
@@ -66,18 +62,18 @@ func (o *updateOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *updateOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
+	// defer cancel()
 
-	ctx = clog.IntoContext(ctx, o.Logr)
-	_, err := o.Client.UpdateUser(ctx, o.UserName, kosmo.UpdateUserOpts{
-		DisplayName: &o.Name,
-		UserRole:    &o.Role,
-	})
-	if err != nil {
-		return err
-	}
+	// ctx = clog.IntoContext(ctx, o.Logr)
+	// _, err := o.Client.UpdateUser(ctx, o.UserID, kosmo.UpdateUserOpts{
+	// 	DisplayName: &o.Name,
+	// 	UserRole:    &o.Role,
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully updated user %s\n", o.UserName)
+	// cmdutil.PrintfColorInfo(o.Out, "Successfully updated user %s\n", o.UserID)
 	return nil
 }

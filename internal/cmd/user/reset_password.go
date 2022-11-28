@@ -1,14 +1,11 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 )
 
@@ -54,24 +51,22 @@ func (o *resetPasswordOption) Complete(cmd *cobra.Command, args []string) error 
 }
 
 func (o *resetPasswordOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	// log := o.Logr.WithName("reset_password")
+	// ctx := clog.IntoContext(o.Ctx, log)
 
-	c := o.Client
+	// c := dashboardv1alpha1connect.NewUserServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	if err := c.ResetPassword(ctx, o.UserName); err != nil {
-		return err
-	}
+	// // res, err := c.UpdateUserPassword(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+	// &dashv1alpha1.UpdateUserPasswordRequest{
+	// // 	UserName:    o.UserName,
+	// // 	CurrentPassword: ,
+	// // }))
+	// if err != nil {
+	// 	return err
+	// }
+	// log.Debug().Info("response: %v", res)
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully reset password: user %s\n", o.UserName)
-
-	pass, err := c.GetDefaultPassword(ctx, o.UserName)
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintln(o.Out, "New password:", *pass)
+	// fmt.Fprintln(o.Out, "New password:", *pass)
 
 	return nil
 }

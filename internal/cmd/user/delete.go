@@ -1,15 +1,16 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type DeleteOption struct {
@@ -54,15 +55,19 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	log := o.Logr.WithName("delete_user")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	c := o.Client
+	c := dashboardv1alpha1connect.NewUserServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	if _, err := c.DeleteUser(ctx, o.UserName); err != nil {
+	res, err := c.DeleteUser(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashv1alpha1.DeleteUserRequest{
+			UserName: o.UserName,
+		}))
+	if err != nil {
 		return err
 	}
+	log.Debug().Info("response: %v", res)
 
 	cmdutil.PrintfColorInfo(o.Out, "Successfully deleted user %s\n", o.UserName)
 	return nil

@@ -1,39 +1,37 @@
 package workspace
 
 import (
-	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/printers"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/yaml"
 
-	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	dashboardv1alpha1connect "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type GetOption struct {
-	*cmdutil.UserNamespacedCliOptions
+	*cmdutil.CliOptions
 
-	WorkspaceName string
+	WorkspaceNames []string
+	UserName       string
+	OutputFormat   string
 
-	outputFormat string
-	showNetwork  bool
+	outputFormat cmdutil.GetOutputFormat
 }
 
-func GetCmd(cmd *cobra.Command, cliOpt *cmdutil.UserNamespacedCliOptions) *cobra.Command {
-	o := &GetOption{UserNamespacedCliOptions: cliOpt}
+func GetCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
+	o := &GetOption{CliOptions: cliOpt}
 
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
-	cmd.Flags().StringVarP(&o.outputFormat, "output", "o", "", "output format. available: 'wide', 'yaml'")
-	cmd.Flags().BoolVar(&o.showNetwork, "network", false, "show workspace network")
+	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "", cmdutil.HelpGetOutputFormat)
 	return cmd
 }
 
@@ -48,129 +46,79 @@ func (o *GetOption) PreRunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Validate(cmd, args); err != nil {
+	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
-	switch o.outputFormat {
-	case "wide", "yaml":
-	case "":
-	default:
-		return fmt.Errorf("invalid output format: available formats is ['wide', 'yaml']")
+	o.outputFormat = cmdutil.GetOutputFormat(o.OutputFormat)
+	if err := o.outputFormat.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Complete(cmd, args); err != nil {
+	if err := o.CliOptions.Complete(cmd, args); err != nil {
 		return err
 	}
 	if len(args) > 0 {
-		o.WorkspaceName = args[0]
-		if o.AllNamespace {
-			return errors.New("--all-namespaces is not allowed to use if WORKSPACE_NAME specified")
-		}
+		o.WorkspaceNames = args
 	}
 	return nil
 }
 
 func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	log := o.Logr.WithName("get_workspaces")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	c := o.Client
+	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	var wss []cosmov1alpha1.Workspace
+	res, err := c.GetWorkspaces(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashv1alpha1.GetWorkspacesRequest{
+			UserName: o.UserName,
+		}))
+	if err != nil {
+		return err
+	}
+	log.Debug().Info("response: %v", res)
 
-	o.Logr.Debug().Info("options", "namespace", o.Namespace, "all-namespaces", o.AllNamespace, "workspaceName", o.WorkspaceName)
+	wss := res.Msg.GetItems()
 
-	if o.AllNamespace {
-		users, err := c.ListUsers(ctx)
-		if err != nil {
-			return err
-		}
-		o.Logr.DebugAll().Info("ListUsers", "users", users)
-
-		for _, user := range users {
-			ws, err := c.ListWorkspacesByUserName(ctx, user.Name)
-			if err != nil {
-				return err
+	if len(o.WorkspaceNames) > 0 {
+		ws := make([]*dashv1alpha1.Workspace, 0, len(o.WorkspaceNames))
+		for _, selected := range o.WorkspaceNames {
+			for _, v := range wss {
+				if selected == v.GetName() {
+					ws = append(ws, v)
+				}
 			}
-			o.Logr.DebugAll().Info("ListWorkspacesByUserName", "user", o.User, "wsCount", len(ws), "wsList", ws)
-			wss = append(wss, ws...)
 		}
-
-	} else if o.WorkspaceName != "" {
-		ws, err := c.GetWorkspaceByUserName(ctx, o.WorkspaceName, o.User)
-		if err != nil {
-			return err
-		}
-		wss = []cosmov1alpha1.Workspace{*ws}
-		o.Logr.DebugAll().Info("GetWorkspaceByUserName", "user", o.User, "ws", ws)
-
-	} else {
-		_, err := c.GetUser(ctx, o.User)
-		if err != nil {
-			return err
-		}
-
-		wss, err = c.ListWorkspacesByUserName(ctx, o.User)
-		if err != nil {
-			return err
-		}
-		o.Logr.DebugAll().Info("ListWorkspacesByUserName", "user", o.User, "wsCount", len(wss), "wsList", wss)
+		wss = ws
 	}
 
-	if o.outputFormat == "yaml" {
-		raw := make([]byte, 0, len(wss))
-		for _, ws := range wss {
-			v := ws.DeepCopy()
-			gvk, err := apiutil.GVKForObject(v, o.Scheme)
-			if err != nil {
-				return err
-			}
-			v.SetGroupVersionKind(gvk)
-			rawObj, err := yaml.Marshal(v)
-			if err != nil {
-				o.Logr.Error(err, "failed to marshal yaml", "workspace", v.Name)
-				continue
-			}
-			raw = append(raw, rawObj...)
-			raw = append(raw, []byte("---\n")...)
+	if o.outputFormat == cmdutil.GetOutputFormatJSON {
+		out, err := json.Marshal(wss)
+		if err != nil {
+			return fmt.Errorf("failed to marshal json: %w", err)
 		}
-		fmt.Fprintln(o.Out, string(raw))
+		fmt.Fprintf(o.Out, "%s", out)
 		return nil
 	}
 
 	w := printers.GetNewTabWriter(o.Out)
 	defer w.Flush()
 
-	if o.showNetwork {
-		columnNames := []string{"USER-NAMESPACE", "WORKSPACE-NAME", "PORT-NAME", "PORT-NUMBER", "GROUP", "HTTP-PATH", "URL"}
-		fmt.Fprintf(w, "%s\n", strings.Join(columnNames, "\t"))
+	columnNames := []string{"NAME", "TEMPLATE", "PODPHASE"}
+	if o.outputFormat == cmdutil.GetOutputFormatWide {
+		columnNames = append(columnNames, "URLS")
+	}
+	fmt.Fprintf(w, "%s\n", strings.Join(columnNames, "\t"))
 
-		for _, ws := range wss {
-			for _, v := range ws.Spec.Network {
-				url := ws.Status.URLs[v.Name]
-				rowdata := []string{ws.Namespace, ws.Name, v.Name, strconv.Itoa(int(v.PortNumber)), *v.Group, v.HTTPPath, url}
-				fmt.Fprintf(w, "%s\n", strings.Join(rowdata, "\t"))
-			}
+	for _, ws := range wss {
+		rowdata := []string{ws.GetName(), ws.GetSpec().GetTemplate(), ws.Status.GetPhase()}
+		if o.outputFormat == cmdutil.GetOutputFormatWide {
+			rowdata = append(rowdata, fmt.Sprintf("%s", ws.GetStatus().GetMainUrl()))
 		}
-
-	} else {
-		columnNames := []string{"USER-NAMESPACE", "NAME", "TEMPLATE", "POD-PHASE"}
-		if o.outputFormat == "wide" {
-			columnNames = append(columnNames, "URLS")
-		}
-		fmt.Fprintf(w, "%s\n", strings.Join(columnNames, "\t"))
-
-		for _, ws := range wss {
-			rowdata := []string{ws.Namespace, ws.Name, ws.Spec.Template.Name, string(ws.Status.Phase)}
-			if o.outputFormat == "wide" {
-				rowdata = append(rowdata, fmt.Sprintf("%s", ws.Status.URLs))
-			}
-			fmt.Fprintf(w, "%s\n", strings.Join(rowdata, "\t"))
-		}
+		fmt.Fprintf(w, "%s\n", strings.Join(rowdata, "\t"))
 	}
 	return nil
 }

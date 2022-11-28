@@ -1,23 +1,14 @@
 package cmdutil
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 
-	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
-	"sigs.k8s.io/kustomize/api/types"
-	"sigs.k8s.io/yaml"
-)
-
-const (
-	KustomizationFile = "kustomization.yaml"
 )
 
 func GetKubeConfig(path string) (*api.Config, error) {
@@ -50,49 +41,6 @@ func GetDefaultNamespace(cfg *api.Config, kubecontext string) string {
 		return ""
 	}
 	return ctx.Namespace
-}
-
-func KustomizeBuildCmd() ([]string, error) {
-	kust, kustErr := exec.LookPath("kustomize")
-	if kustErr != nil {
-		kctl, kctlErr := exec.LookPath("kubectl")
-		if kctlErr != nil {
-			return nil, fmt.Errorf("kubectl nor kustomize found: kustmizr=%v, kubectl=%v", kustErr, kctlErr)
-		}
-		return []string{kctl, "kustomize"}, nil
-	}
-	return []string{kust, "build"}, nil
-}
-
-func ExecKustomize(ctx context.Context, dir string, kust *types.Kustomization) ([]byte, error) {
-	log := clog.FromContext(ctx).WithCaller()
-
-	kustomizeBuildCmd, err := KustomizeBuildCmd()
-	if err != nil {
-		return nil, err
-	}
-	log.Debug().Info("kustomize cmd", "cmd", kustomizeBuildCmd)
-
-	kustYaml, err := yaml.Marshal(kust)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug().Info(string(kustYaml), "obj", "kustomization.yaml")
-
-	// create kustomization.yaml
-	if err := CreateFile(dir, KustomizationFile, kustYaml); err != nil {
-		return nil, err
-	}
-	defer RemoveFile(dir, KustomizationFile)
-
-	// run kustomize build
-	kustomizeCmd := append(kustomizeBuildCmd, dir)
-
-	out, err := exec.CommandContext(ctx, kustomizeCmd[0], kustomizeCmd[1:]...).CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("failed to exec kustomize : %w : %s", err, out)
-	}
-	return out, nil
 }
 
 func CreateFile(dir, fname string, data []byte) error {

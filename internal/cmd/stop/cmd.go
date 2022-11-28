@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
+func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
 	runCmd := &cobra.Command{
 		Use:   "stop",
 		Short: "Stop workload resources",
@@ -14,11 +14,6 @@ func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
 Stop cosmo workload resources
 `,
 	}
-
-	o := cmdutil.NewUserNamespacedCliOptions(co)
-
-	runCmd.PersistentFlags().StringVarP(&o.User, "user", "u", "", "user name")
-	runCmd.PersistentFlags().StringVarP(&o.Namespace, "namespace", "n", "", "namespace")
 
 	runCmd.AddCommand(workspace.StopInstanceCmd(&cobra.Command{
 		Use:     "workspace WORKSPACE_NAME",

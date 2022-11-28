@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
+func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create cosmo resources",
@@ -16,8 +16,6 @@ func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
 Create cosmo resources
 `,
 	}
-
-	o := cmdutil.NewUserNamespacedCliOptions(co)
 
 	createCmd.AddCommand(workspace.CreateCmd(&cobra.Command{
 		Use:     "workspace WORKSPACE_NAME --template TEMPLATE_NAME",
@@ -28,7 +26,7 @@ Create cosmo resources
 	createCmd.AddCommand(user.CreateCmd(&cobra.Command{
 		Use:   "user USER_NAME --role cosmo-admin",
 		Short: "Create user",
-	}, o.CliOptions))
+	}, o))
 	createCmd.AddCommand(netrule.CreateCmd(&cobra.Command{
 		Use:     "networkrule NETWORK_RULE_NAME --workspace WORKSPACE_NAME --port PORT_NUMBER",
 		Short:   "Create or update workspace network rule",

@@ -1,33 +1,25 @@
 package template
 
 import (
-	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
+
 	"strings"
-	"time"
 
 	"github.com/mattn/go-isatty"
-	"github.com/sethvargo/go-password/password"
 	"github.com/spf13/cobra"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/cli-runtime/pkg/printers"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// "k8s.io/apimachinery/pkg/runtime"
+	// "k8s.io/utils/pointer"
+	// "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	cmdutil "github.com/cosmo-workspace/cosmo/pkg/cmdutil"
-	"github.com/cosmo-workspace/cosmo/pkg/template"
-	"github.com/cosmo-workspace/cosmo/pkg/transformer"
 )
 
 type validateOption struct {
@@ -64,7 +56,7 @@ func (o *validateOption) PreRunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *validateOption) Validate(cmd *cobra.Command, args []string) error {
-	if err := o.CliOptions.Validate(cmd, args); err != nil {
+	if err := o.Validate(cmd, args); err != nil {
 		return err
 	}
 	if o.File == "" {
@@ -74,7 +66,7 @@ func (o *validateOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *validateOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.CliOptions.Complete(cmd, args); err != nil {
+	if err := o.Complete(cmd, args); err != nil {
 		return err
 	}
 
@@ -139,108 +131,108 @@ func (o *validateOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *validateOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
+	// defer cancel()
 
-	o.Logr.Info("smoke test: dryrun apply template")
-	_, tmplUnst, err := template.StringToUnstructured(string(o.input))
-	if err != nil {
-		return err
-	}
-	if err := o.dryrunApplyOnServer(ctx, tmplUnst); err != nil {
-		return err
-	}
+	// o.Logr.Info("smoke test: dryrun apply template")
+	// _, tmplUnst, err := template.StringToUnstructured(string(o.input))
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := o.dryrunApplyOnServer(ctx, tmplUnst); err != nil {
+	// 	return err
+	// }
 
-	// gen dummy instance sufix
-	g, err := password.NewGenerator(&password.GeneratorInput{Symbols: "", Digits: ""})
-	if err != nil {
-		return fmt.Errorf("failed to create password generator: %w", err)
-	}
+	// // gen dummy instance sufix
+	// g, err := password.NewGenerator(&password.GeneratorInput{Symbols: "", Digits: ""})
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create password generator: %w", err)
+	// }
 
-	sufix, err := g.Generate(8, 0, 0, true, true)
-	if err != nil {
-		return fmt.Errorf("failed to generate random string: %w", err)
-	}
+	// sufix, err := g.Generate(8, 0, 0, true, true)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to generate random string: %w", err)
+	// }
 
-	dummyInst := cosmov1alpha1.Instance{}
-	dummyInst.SetName(fmt.Sprintf("cosmoctl-validate-%s", sufix))
-	dummyInst.SetNamespace("default")
-	dummyInst.SetUID(types.UID(sufix))
-	dummyInst.Spec.Vars = o.vars
+	// dummyInst := cosmov1alpha1.Instance{}
+	// dummyInst.SetName(fmt.Sprintf("cosmoctl-validate-%s", sufix))
+	// dummyInst.SetNamespace("default")
+	// dummyInst.SetUID(types.UID(sufix))
+	// dummyInst.Spec.Vars = o.vars
 
-	o.Logr.Info("smoke test: create dummy instance to apply each resources", "instance", dummyInst.GetName())
-	o.Logr.Debug().DumpObject(o.Scheme, &dummyInst, "test instance")
+	// o.Logr.Info("smoke test: create dummy instance to apply each resources", "instance", dummyInst.GetName())
+	// o.Logr.Debug().DumpObject(o.Scheme, &dummyInst, "test instance")
 
-	builts, err := template.BuildObjects(o.tmpl.Spec, &dummyInst)
-	if err != nil {
-		return fmt.Errorf("failed to build test instance: %w", err)
-	}
-	// only apply MetadataTransformer
-	ts := []transformer.Transformer{transformer.NewMetadataTransformer(&dummyInst, o.Scheme, template.IsDisableNamePrefix(&o.tmpl))}
-	builts, err = transformer.ApplyTransformers(ctx, ts, builts)
-	if err != nil {
-		return fmt.Errorf("failed to transform objects: %w", err)
-	}
+	// builts, err := template.BuildObjects(o.tmpl.Spec, &dummyInst)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to build test instance: %w", err)
+	// }
+	// // only apply MetadataTransformer
+	// ts := []transformer.Transformer{transformer.NewMetadataTransformer(&dummyInst, o.Scheme, template.IsDisableNamePrefix(&o.tmpl))}
+	// builts, err = transformer.ApplyTransformers(ctx, ts, builts)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to transform objects: %w", err)
+	// }
 
-	w := printers.GetNewTabWriter(o.Out)
-	defer w.Flush()
-	columnNames := []string{"APIVERSION", "KIND", "NAME", "RESULT", "MESSAGE"}
-	fmt.Fprintf(w, "%s\n", strings.Join(columnNames, "\t"))
+	// w := printers.GetNewTabWriter(o.Out)
+	// defer w.Flush()
+	// columnNames := []string{"APIVERSION", "KIND", "NAME", "RESULT", "MESSAGE"}
+	// fmt.Fprintf(w, "%s\n", strings.Join(columnNames, "\t"))
 
-	for _, built := range builts {
-		o.Logr.Info("smoke test: dryrun applying dummy resource",
-			"apiVersion", built.GetAPIVersion(), "kind", built.GetKind())
+	// for _, built := range builts {
+	// 	o.Logr.Info("smoke test: dryrun applying dummy resource",
+	// 		"apiVersion", built.GetAPIVersion(), "kind", built.GetKind())
 
-		o.Logr.Debug().DumpObject(o.Scheme, &built, "validating object")
-		if o.DryrunOnClientSide {
-			err = o.kubectlDryrunApplyOnClient(ctx, &built)
-		} else {
-			err = o.dryrunApplyOnServer(ctx, &built)
-		}
-		rowdata := resultRow(built.GetAPIVersion(), built.GetKind(), built.GetName(), err)
-		fmt.Fprintf(w, "%s\n", strings.Join(rowdata, "\t"))
-	}
+	// 	o.Logr.Debug().DumpObject(o.Scheme, &built, "validating object")
+	// 	if o.DryrunOnClientSide {
+	// 		err = o.kubectlDryrunApplyOnClient(ctx, &built)
+	// 	} else {
+	// 		err = o.dryrunApplyOnServer(ctx, &built)
+	// 	}
+	// 	rowdata := resultRow(built.GetAPIVersion(), built.GetKind(), built.GetName(), err)
+	// 	fmt.Fprintf(w, "%s\n", strings.Join(rowdata, "\t"))
+	// }
 
 	return nil
 }
 
-func (o *validateOption) dryrunApplyOnServer(ctx context.Context, obj client.Object) error {
-	options := &client.PatchOptions{
-		FieldManager: "cosmoctl-validate",
-		Force:        pointer.Bool(true),
-		DryRun:       []string{metav1.DryRunAll},
-	}
+// func (o *validateOption) dryrunApplyOnServer(ctx context.Context, obj client.Object) error {
+// 	options := &client.PatchOptions{
+// 		FieldManager: "cosmoctl-validate",
+// 		Force:        pointer.Bool(true),
+// 		DryRun:       []string{metav1.DryRunAll},
+// 	}
 
-	if err := o.Client.Patch(ctx, obj, client.Apply, options); err != nil {
-		return fmt.Errorf("dryrun failed: %w", err)
-	}
-	return nil
-}
+// 	if err := o.Client.Patch(ctx, obj, client.Apply, options); err != nil {
+// 		return fmt.Errorf("dryrun failed: %w", err)
+// 	}
+// 	return nil
+// }
 
-func (o *validateOption) kubectlDryrunApplyOnClient(ctx context.Context, obj runtime.Object) error {
-	b, err := yaml.Marshal(obj)
-	if err != nil {
-		return err
-	}
-	buf := bytes.NewBuffer(b)
+// func (o *validateOption) kubectlDryrunApplyOnClient(ctx context.Context, obj runtime.Object) error {
+// 	b, err := yaml.Marshal(obj)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	buf := bytes.NewBuffer(b)
 
-	cmd := exec.CommandContext(ctx, "kubectl", "apply", "--dry-run=client", "-f", "-")
-	cmd.Stdin = buf
+// 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "--dry-run=client", "-f", "-")
+// 	cmd.Stdin = buf
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to exec kubectl: %w : %s", err, out)
-	}
-	return nil
-}
+// 	out, err := cmd.CombinedOutput()
+// 	if err != nil {
+// 		return fmt.Errorf("failed to exec kubectl: %w : %s", err, out)
+// 	}
+// 	return nil
+// }
 
-func resultRow(apiVersion, kind, name string, err error) []string {
-	var result, errMsg string
-	if err == nil {
-		result = "OK"
-	} else {
-		result = "NG"
-		errMsg = err.Error()
-	}
-	return []string{apiVersion, kind, name, result, errMsg}
-}
+// func resultRow(apiVersion, kind, name string, err error) []string {
+// 	var result, errMsg string
+// 	if err == nil {
+// 		result = "OK"
+// 	} else {
+// 		result = "NG"
+// 		errMsg = err.Error()
+// 	}
+// 	return []string{apiVersion, kind, name, result, errMsg}
+// }

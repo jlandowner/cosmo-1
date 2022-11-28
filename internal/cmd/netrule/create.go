@@ -1,23 +1,25 @@
 package netrule
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/pointer"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashboardv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type CreateOption struct {
-	*cmdutil.UserNamespacedCliOptions
+	*cmdutil.CliOptions
 
 	WorkspaceName string
+	UserName      string
 	NetRuleName   string
 	PortNumber    int32
 	Group         string
@@ -27,13 +29,14 @@ type CreateOption struct {
 	rule cosmov1alpha1.NetworkRule
 }
 
-func CreateCmd(cmd *cobra.Command, cliOpt *cmdutil.UserNamespacedCliOptions) *cobra.Command {
-	o := &CreateOption{UserNamespacedCliOptions: cliOpt}
+func CreateCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
+	o := &CreateOption{CliOptions: cliOpt}
 
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 	cmd.Flags().StringVar(&o.WorkspaceName, "workspace", "", "workspace name (Required)")
 	cmd.Flags().Int32Var(&o.PortNumber, "port", 0, "serivce port number (Required)")
+	cmd.Flags().StringVar(&o.UserName, "user", "", "user name")
 	cmd.Flags().StringVar(&o.Group, "group", "", "group of ports for URLVar. Ports in the same group are treated as the same domain. set 'name' value if empty")
 	cmd.Flags().StringVar(&o.HTTPPath, "path", "/", "path for Ingress path when using ingress")
 	cmd.Flags().BoolVar(&o.Public, "public", false, "disable authentication for this port")
@@ -52,10 +55,7 @@ func (o *CreateOption) PreRunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *CreateOption) Validate(cmd *cobra.Command, args []string) error {
-	if o.AllNamespace {
-		return errors.New("--all-namespaces is not supported in this command")
-	}
-	if err := o.UserNamespacedCliOptions.Validate(cmd, args); err != nil {
+	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
 	if len(args) < 1 {
@@ -71,7 +71,7 @@ func (o *CreateOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Complete(cmd, args); err != nil {
+	if err := o.CliOptions.Complete(cmd, args); err != nil {
 		return err
 	}
 	o.NetRuleName = args[0]
@@ -91,17 +91,28 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	log := o.Logr.WithName("create_networkrule")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	c := o.Client
+	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	if _, err := c.AddNetworkRule(ctx, o.WorkspaceName, o.User, o.rule.Name,
-		o.rule.PortNumber, o.rule.Group, o.rule.HTTPPath, o.rule.Public); err != nil {
+	res, err := c.UpsertNetworkRule(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashboardv1alpha1.UpsertNetworkRuleRequest{
+			UserName: o.UserName,
+			WsName:   o.WorkspaceName,
+			NetworkRule: &dashboardv1alpha1.NetworkRule{
+				Name:       o.NetRuleName,
+				PortNumber: o.PortNumber,
+				Group:      o.Group,
+				HttpPath:   o.HTTPPath,
+				Public:     o.Public,
+			},
+		}))
+	if err != nil {
 		return err
 	}
+	log.Debug().Info("response: %v", res)
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully add network rule '%s' for workspace '%s'\n", o.NetRuleName, o.WorkspaceName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully upserted network rule '%s' for workspace '%s'\n", o.NetRuleName, o.WorkspaceName)
 	return nil
 }

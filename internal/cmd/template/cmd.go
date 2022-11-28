@@ -1,8 +1,9 @@
 package template
 
 import (
-	cmdutil "github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	"github.com/spf13/cobra"
+
+	cmdutil "github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 )
 
 func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
@@ -15,59 +16,59 @@ Template utility command.
 		Aliases: []string{"tmpl"},
 	}
 
-	tmplCmd.AddCommand(generateCmd(&cobra.Command{
-		Use:     "generate --name TEMPLATE_NAME [< Input via Stdin or pipe]",
-		Aliases: []string{"gen"},
-		Short:   "Generate Template",
-		Long: `Generate Template
+	// 	tmplCmd.AddCommand(generateCmd(&cobra.Command{
+	// 		Use:     "generate --name TEMPLATE_NAME [< Input via Stdin or pipe]",
+	// 		Aliases: []string{"gen"},
+	// 		Short:   "Generate Template",
+	// 		Long: `Generate Template
 
-For create generated template, just do "kubectl create -f cosmo-template.yaml"
+	// For create generated template, just do "kubectl create -f cosmo-template.yaml"
 
-Example:
-  * Pipe from kustomize build and apply to your cluster in a single line 
-	
-      kustomize build ./kubernetes/ | cosmoctl template generate --name TEMPLATE_NAME | kubectl apply -f -
+	// Example:
+	//   * Pipe from kustomize build and apply to your cluster in a single line
 
-  * Pipe from helm template and generate Workspace Template with cosmo-auth-proxy injection
-	
-  	  helm template code-server ci/helm-chart \
-		| cosmoctl template generate --name TEMPLATE_NAME --workspace
+	//       kustomize build ./kubernetes/ | cosmoctl template generate --name TEMPLATE_NAME | kubectl apply -f -
 
-  * Input merged config file (kustomize build ... or helm template ... etc.) and save it to file
+	//   * Pipe from helm template and generate Workspace Template with cosmo-auth-proxy injection
 
-      cosmoctl template generate --name TEMPLATE_NAME -o cosmo-template.yaml < merged.yaml
-`,
-	}, o))
-	tmplCmd.AddCommand(GetCmd(&cobra.Command{
-		Use:   "get",
-		Short: "Get templates",
-		Long: `Get Templates
+	//   	  helm template code-server ci/helm-chart \
+	// 		| cosmoctl template generate --name TEMPLATE_NAME --workspace
 
-Basically it is similar to "kubectl get template"
+	//   * Input merged config file (kustomize build ... or helm template ... etc.) and save it to file
 
-For type workspace template, use with --workspace flag to see more information. 
-`,
-	}, o))
-	tmplCmd.AddCommand(validateCmd(&cobra.Command{
-		Use:     "validate --file FILE",
-		Aliases: []string{"valid", "check"},
-		Short:   "Validate Template",
-		Long: `Validate Template by dry-run
+	//       cosmoctl template generate --name TEMPLATE_NAME -o cosmo-template.yaml < merged.yaml
+	// `,
+	// 	}, o))
+	// 	tmplCmd.AddCommand(GetCmd(&cobra.Command{
+	// 		Use:   "get",
+	// 		Short: "Get templates",
+	// 		Long: `Get Templates
 
-Usage:
-  * Dry-run on server-side
-	
-      cosmoctl template validate -f cosmo-template.yaml
+	// Basically it is similar to "kubectl get template"
 
-  * Dry-run on client-side using kubectl
-	
-      cosmoctl template validate -f cosmo-template.yaml --client
+	// For type workspace template, use with --workspace flag to see more information.
+	// `,
+	// 	}, o))
+	// 	tmplCmd.AddCommand(validateCmd(&cobra.Command{
+	// 		Use:     "validate --file FILE",
+	// 		Aliases: []string{"valid", "check"},
+	// 		Short:   "Validate Template",
+	// 		Long: `Validate Template by dry-run
 
-  * Input from stdin not file.
+	// Usage:
+	//   * Dry-run on server-side
 
-      cat cosmo-template.yaml | cosmoctl template validate -f -
-`,
-	}, o))
+	//       cosmoctl template validate -f cosmo-template.yaml
+
+	//   * Dry-run on client-side using kubectl
+
+	//       cosmoctl template validate -f cosmo-template.yaml --client
+
+	//   * Input from stdin not file.
+
+	//       cat cosmo-template.yaml | cosmoctl template validate -f -
+	// `,
+	// 	}, o))
 
 	cmd.AddCommand(tmplCmd)
 }

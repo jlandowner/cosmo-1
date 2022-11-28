@@ -1,31 +1,32 @@
 package workspace
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
-
 	"k8s.io/utils/pointer"
 
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
-	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	dashboardv1alpha1connect "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type RunInstanceOption struct {
-	*cmdutil.UserNamespacedCliOptions
+	*cmdutil.CliOptions
 
 	InstanceName string
+	UserName     string
 }
 
-func RunInstanceCmd(cmd *cobra.Command, cliOpt *cmdutil.UserNamespacedCliOptions) *cobra.Command {
-	o := &RunInstanceOption{UserNamespacedCliOptions: cliOpt}
+func RunInstanceCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
+	o := &RunInstanceOption{CliOptions: cliOpt}
 
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name")
 	return cmd
 }
 
@@ -40,7 +41,7 @@ func (o *RunInstanceOption) PreRunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *RunInstanceOption) Validate(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Validate(cmd, args); err != nil {
+	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
 	if len(args) < 1 {
@@ -50,7 +51,7 @@ func (o *RunInstanceOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *RunInstanceOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Complete(cmd, args); err != nil {
+	if err := o.CliOptions.Complete(cmd, args); err != nil {
 		return err
 	}
 	o.InstanceName = args[0]
@@ -58,15 +59,21 @@ func (o *RunInstanceOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *RunInstanceOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
-	ctx = clog.IntoContext(ctx, o.Logr)
+	log := o.Logr.WithName("run_instance")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	c := o.Client
+	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	if _, err := c.UpdateWorkspace(ctx, o.InstanceName, o.User, kosmo.UpdateWorkspaceOpts{Replicas: pointer.Int64(1)}); err != nil {
+	res, err := c.UpdateWorkspace(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashv1alpha1.UpdateWorkspaceRequest{
+			UserName: o.UserName,
+			WsName:   o.InstanceName,
+			Replicas: pointer.Int64(1),
+		}))
+	if err != nil {
 		return err
 	}
+	log.Debug().Info("response: %v", res)
 
 	cmdutil.PrintfColorInfo(o.Out, "Successfully run workspace %s\n", o.InstanceName)
 	return nil

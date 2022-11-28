@@ -8,6 +8,8 @@ import (
 
 	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/auth"
@@ -53,7 +55,8 @@ func (s *Server) setupRouter() {
 	// setup middlewares for all routers to use HTTPRequestLogger and TimeoutHandler.
 	// deadline of the Timeout handler takes precedence over any subsequent deadlines
 	reqLogr := NewHTTPRequestLogger(s.Log)
-	s.http.Handler = reqLogr.Middleware(s.timeoutHandler(mux))
+
+	s.http.Handler = h2c.NewHandler(reqLogr.Middleware(s.timeoutHandler(mux)), &http2.Server{})
 }
 
 func (s *Server) setupSessionStore() {

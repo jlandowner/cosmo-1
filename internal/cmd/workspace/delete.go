@@ -1,30 +1,33 @@
 package workspace
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
+	dashboardv1alpha1connect "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
 type DeleteOption struct {
-	*cmdutil.UserNamespacedCliOptions
+	*cmdutil.CliOptions
 
 	WorkspaceName string
-	DryRun        bool
+	UserName      string
+	// DryRun        bool //TODO
 }
 
-func DeleteCmd(cmd *cobra.Command, cliOpt *cmdutil.UserNamespacedCliOptions) *cobra.Command {
-	o := &DeleteOption{UserNamespacedCliOptions: cliOpt}
+func DeleteCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
+	o := &DeleteOption{CliOptions: cliOpt}
 
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
-	cmd.Flags().BoolVar(&o.DryRun, "dry-run", false, "dry run")
+	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name")
+	// cmd.Flags().BoolVar(&o.DryRun, "dry-run", false, "dry run")
 	return cmd
 }
 
@@ -39,10 +42,7 @@ func (o *DeleteOption) PreRunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DeleteOption) Validate(cmd *cobra.Command, args []string) error {
-	if o.AllNamespace {
-		return errors.New("--all-namespaces is not supported in this command")
-	}
-	if err := o.UserNamespacedCliOptions.Validate(cmd, args); err != nil {
+	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
 	if len(args) < 1 {
@@ -52,7 +52,7 @@ func (o *DeleteOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.UserNamespacedCliOptions.Complete(cmd, args); err != nil {
+	if err := o.CliOptions.Complete(cmd, args); err != nil {
 		return err
 	}
 	o.WorkspaceName = args[0]
@@ -60,21 +60,22 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
-	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
-	defer cancel()
+	log := o.Logr.WithName("delete_workspace")
+	ctx := clog.IntoContext(o.Ctx, log)
 
-	if o.DryRun {
-		if _, err := o.Client.DeleteWorkspace(ctx, o.WorkspaceName, o.User, client.DryRunAll); err != nil {
-			return err
-		}
-		cmdutil.PrintfColorInfo(o.ErrOut, "Successfully deleted workspace %s (dry-run)\n", o.WorkspaceName)
+	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	} else {
-		if _, err := o.Client.DeleteWorkspace(ctx, o.WorkspaceName, o.User); err != nil {
-			return err
-		}
-		cmdutil.PrintfColorInfo(o.ErrOut, "Successfully deleted workspace %s\n", o.WorkspaceName)
+	res, err := c.DeleteWorkspace(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+		&dashv1alpha1.DeleteWorkspaceRequest{
+			UserName: o.UserName,
+			WsName:   o.WorkspaceName,
+		}))
+	if err != nil {
+		return err
 	}
+	log.Debug().Info("response: %v", res)
+
+	cmdutil.PrintfColorInfo(o.ErrOut, "Successfully deleted workspace %s\n", o.WorkspaceName)
 
 	return nil
 }

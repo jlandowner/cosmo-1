@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
+func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
 		Short: "Delete cosmo resources",
@@ -16,11 +16,6 @@ func AddCommand(cmd *cobra.Command, co *cmdutil.CliOptions) {
 Delete cosmo resources
 `,
 	}
-
-	o := cmdutil.NewUserNamespacedCliOptions(co)
-
-	deleteCmd.PersistentFlags().StringVarP(&o.User, "user", "u", "", "user name")
-	deleteCmd.PersistentFlags().StringVarP(&o.Namespace, "namespace", "n", "", "namespace")
 
 	deleteCmd.AddCommand(workspace.DeleteCmd(&cobra.Command{
 		Use:     "workspace WORKSPACE_NAME",
@@ -30,10 +25,10 @@ Delete cosmo resources
 	deleteCmd.AddCommand(user.DeleteCmd(&cobra.Command{
 		Use:   "user USER_NAME",
 		Short: "Delete user",
-	}, o.CliOptions))
+	}, o))
 	deleteCmd.AddCommand(netrule.DeleteCmd(&cobra.Command{
 		Use:     "networkrule NETWORK_RULE_NAME --workspace WORKSPACE_NAME --port PORT_NUMBER",
-		Short:   "Create or update workspace network rule",
+		Short:   "Delete workspace network rule",
 		Aliases: []string{"netrule", "net"},
 	}, o))
 
