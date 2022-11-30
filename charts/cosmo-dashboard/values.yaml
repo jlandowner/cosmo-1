@@ -84,10 +84,14 @@ maxMinutes: 180
 
 cert:
   secretName: dashboard-server-cert
-  enableCertManager: true
-  issuerRef:
-    kind: ClusterIssuer
-    name: cosmo-selfsigned-clusterissuer
-  dnsName:
+
+  certManager:
+    enabled: true
+    issuerRef:
+      kind: ClusterIssuer
+      name: cosmo-selfsigned-clusterissuer
+    dnsName:
 
 insecure: false
+
+sessionAuthKey:

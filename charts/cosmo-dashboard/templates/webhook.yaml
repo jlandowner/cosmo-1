@@ -1,18 +1,21 @@
+{{ $tls := fromYaml ( include "cosmo-dashboard.gen-certs" . ) }}
+---
+{{- if .Values.insecure }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  {{- if $.Values.enableCertManager }}
+  {{- if $.Values.cert.certManager.enabled }}
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/cosmo-dashboard-cert
   {{- end }}
   labels:
-    {{- include "cosmo-controller-manager.labels" . | nindent 4 }}
+    {{- include "cosmo-dashboard.labels" . | nindent 4 }}
   name: cosmo-dashboard-mutating-webhook
 webhooks:
 - admissionReviewVersions:
   - v1
   clientConfig:
-    caBundle: {{ if not $.Values.enableCertManager -}}{{ $tls.caCert }}{{- else -}}Cg=={{ end }}
+    caBundle: {{ if not $.Values.cert.certManager.enabled -}}{{ $tls.caCert }}{{- else -}}Cg=={{ end }}
     service:
       name: cosmo-dashboard
       namespace: {{ .Release.Namespace }}
@@ -31,3 +34,4 @@ webhooks:
     resources:
     - pods
   sideEffects: None
+{{- end }}

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -28,6 +27,7 @@ type Server struct {
 	StaticFileDir       string
 	Port                int
 	MaxAgeSeconds       int
+	SessionAuthKey      []byte
 	SessionName         string
 	TLSPrivateKeyPath   string
 	TLSCertPath         string
@@ -60,7 +60,7 @@ func (s *Server) setupRouter() {
 }
 
 func (s *Server) setupSessionStore() {
-	store := session.NewStore(securecookie.GenerateRandomKey(64), securecookie.GenerateRandomKey(32), s.sessionCookieKey())
+	store := session.NewStore(s.SessionAuthKey, s.SessionAuthKey, s.sessionCookieKey())
 	s.sessionStore = store
 }
 

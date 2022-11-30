@@ -1,6 +1,6 @@
 {{ $tls := fromYaml ( include "cosmo-dashboard.gen-certs" . ) }}
 ---
-{{- if $.Values.cert.enableCertManager }}
+{{- if $.Values.cert.certManager.enabled }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -12,10 +12,10 @@ spec:
   dnsNames:
     - cosmo-dashboard.{{.Release.Namespace}}.svc
     - cosmo-dashboard.{{.Release.Namespace}}.svc.cluster.local
-    {{- if .Values.dnsName }}
-    - {{ .Values.dnsName }}
+    {{- if .Values.cert.certManager.dnsName }}
+    - {{ .Values.cert.certManager.dnsName }}
     {{- end }}
-  {{- with .Values.cert.issuerRef }}
+  {{- with .Values.cert.certManager.issuerRef }}
   issuerRef:
     {{- toYaml . | nindent 4 }}
   {{- end }}

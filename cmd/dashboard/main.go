@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,6 +23,7 @@ import (
 	"github.com/cosmo-workspace/cosmo/pkg/auth"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
+	"github.com/gorilla/securecookie"
 )
 
 var (
@@ -37,6 +39,7 @@ func init() {
 }
 
 type options struct {
+	SessionAuthKey          string `printOption:"false"`
 	StaticFileDir           string
 	ResponseTimeoutSeconds  int64
 	GracefulShutdownSeconds int64
@@ -48,6 +51,7 @@ type options struct {
 }
 
 func main() {
+	flag.StringVar(&o.SessionAuthKey, "auth-key", "", "Session authentication key. It must be 32 bytes secret string")
 	flag.Int64Var(&o.ResponseTimeoutSeconds, "timeout-seconds", 3, "Timeout seconds for response")
 	flag.Int64Var(&o.GracefulShutdownSeconds, "graceful-shutdown-seconds", 10, "Graceful shutdown seconds")
 	flag.StringVar(&o.StaticFileDir, "serve-dir", "/app/public", "Static file dir to serve")
@@ -66,6 +70,16 @@ func main() {
 	printOptions()
 
 	ctx := ctrl.SetupSignalHandler()
+
+	var authKey []byte
+	if o.SessionAuthKey == "" {
+		authKey = securecookie.GenerateRandomKey(32)
+	} else {
+		authKey = []byte(o.SessionAuthKey)
+	}
+	if len(authKey) != 32 {
+		panic(fmt.Sprintf("auth key must be 32 bytes but %d", len(authKey)))
+	}
 
 	// Setup controller manager
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
@@ -105,6 +119,7 @@ func main() {
 		StaticFileDir:       o.StaticFileDir,
 		Port:                o.ServerPort,
 		MaxAgeSeconds:       60 * o.MaxAgeMinutes,
+		SessionAuthKey:      authKey,
 		SessionName:         "cosmo-dashboard",
 		TLSPrivateKeyPath:   filepath.Join(o.CertDir, "tls.key"),
 		TLSCertPath:         filepath.Join(o.CertDir, "tls.crt"),
@@ -132,6 +147,12 @@ func printOptions() {
 	for i := 0; i < rt.NumField(); i++ {
 		options[i*2] = rt.Field(i).Name
 		options[i*2+1] = rv.Field(i).Interface()
+
+		if tag := rt.Field(i).Tag.Get("printOption"); tag != "" {
+			if print, _ := strconv.ParseBool(tag); !print {
+				options[i*2+1] = "*****"
+			}
+		}
 	}
 
 	setupLog.Info("options", options...)

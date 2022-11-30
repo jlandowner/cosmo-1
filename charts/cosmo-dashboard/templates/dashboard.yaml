@@ -65,6 +65,11 @@ spec:
         - --tls-key=/app/cert/tls.key
         - --tls-cert=/app/cert/tls.crt
         {{- end }}
+        {{- if empty .Values.sessionAuthKey }}
+        - --auth-key=$COSMO_SESSION_AUTHKEY
+        {{- else }}
+        - --auth-key={{ .Values.sessionAuthKey }}
+        {{- end }}
         command:
         - /app/dashboard
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -92,6 +97,11 @@ spec:
         - mountPath: /app/cert
           name: cert
           readOnly: true
+        {{- end }}
+        envFrom:
+        {{- if empty .Values.sessionAuthKey }}
+        - secretRef:
+          name: cosmo-session-authkey
         {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
