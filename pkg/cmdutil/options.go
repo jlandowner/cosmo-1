@@ -12,15 +12,21 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
+	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 )
 
 type GetOutputFormat string
@@ -54,6 +60,7 @@ type CliConfig struct {
 	ServerCA       []byte `json:"ca,omitempty"`
 	ServerEndpoint string `json:"endpoint,omitempty"`
 	Token          string `json:"token,omitempty"`
+	Cookie         string `json:"cookie,omitempty"`
 }
 
 func (c *CliConfig) CompleteInCluster() error {
@@ -143,6 +150,13 @@ type CliOptions struct {
 
 	Ctx    context.Context
 	Client connect.HTTPClient
+
+	UseKubeClient  bool
+	KubeClient     *kosmo.Client
+	KubeScheme     *runtime.Scheme
+	KubeConfigPath string
+	KubeContext    string
+
 	Logr   *clog.Logger
 	In     io.Reader
 	Out    io.Writer
@@ -153,6 +167,12 @@ func (o *CliOptions) AddFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().IntVarP(&o.LogLevel, "verbose", "v", -1, "log level. -1:DISABLED, 0:INFO, 1:DEBUG, 2:ALL")
 	cmd.PersistentFlags().StringVar(&o.CliConfigFilePath, "config", "$HOME/.cosmoctl", "config file path")
 	cmd.PersistentFlags().BoolVar(&o.Insecure, "insecure", false, "use insecure client")
+}
+
+func (o *CliOptions) AddKubeClientFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&o.UseKubeClient, "kube", "k", false, "use kube rbac authentication instead of cosmo user authentication")
+	cmd.PersistentFlags().StringVar(&o.KubeContext, "kubecontext", "", "kube context")
+	cmd.PersistentFlags().StringVar(&o.KubeConfigPath, "kubeconfig", "$HOME/.kube/config", "kubeconfig file path")
 }
 
 func NewCliOptions() *CliOptions {
@@ -174,14 +194,18 @@ func (o *CliOptions) CompleteLogger() {
 	}
 }
 
-func (o *CliOptions) Complete(cmd *cobra.Command, args []string) error {
-	// Complete Logger
-	o.CompleteLogger()
-
-	// Complete CliConfig
+func (o *CliOptions) CompleteCliConfig() error {
 	// First, load config from file
 	// If failed to load config file, then load incluster config
 	// If both failed, return err
+	if o.CliConfigFilePath == "" || o.CliConfigFilePath == "$HOME/.cosmoctl" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		o.CliConfigFilePath = path.Join(home, ".cosmoctl")
+	}
+
 	if err := o.CliConfig.CompleteByConfigFile(o.CliConfigFilePath); err != nil {
 		err = fmt.Errorf("failed to load config file %s: %w", o.CliConfigFilePath, err)
 
@@ -189,17 +213,78 @@ func (o *CliOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to load config %v: %w", ierr, err)
 		}
 	}
+	return nil
+}
 
-	// Complete TLS Client
-	caPool := x509.NewCertPool()
-	caPool.AppendCertsFromPEM(o.ServerCA)
+func (o *CliOptions) CompleteKubeClient() error {
+	cfgFlg := genericclioptions.NewConfigFlags(true)
+	if o.KubeConfigPath != "" && o.KubeConfigPath != "$HOME/.kube/config" {
+		cfgFlg.KubeConfig = &o.KubeConfigPath
+	}
+	if o.KubeContext != "" {
+		cfgFlg.Context = &o.KubeContext
+	}
 
-	o.Client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caPool,
-			},
-		},
+	cfg, err := cfgFlg.ToRESTConfig()
+	if err != nil {
+		return err
+	}
+
+	scheme := runtime.NewScheme()
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(cosmov1alpha1.AddToScheme(scheme))
+	// +kubebuilder:scaffold:scheme
+
+	baseclient, err := kosmo.NewClientByRestConfig(cfg, scheme)
+	if err != nil {
+		return err
+	}
+	o.KubeClient = &baseclient
+	o.KubeScheme = scheme
+	return nil
+}
+
+func (o *CliOptions) CompleteClient() error {
+	if o.Insecure {
+		o.Client = http.DefaultClient
+	} else {
+		caPool, err := x509.SystemCertPool()
+		if err != nil {
+			return err
+		}
+
+		if len(o.ServerCA) > 0 {
+			caPool.AppendCertsFromPEM(o.ServerCA)
+		}
+
+		t := http.DefaultTransport.(*http.Transport).Clone()
+		t.TLSClientConfig = &tls.Config{
+			RootCAs:            caPool,
+			InsecureSkipVerify: true,
+		}
+		o.Client = &http.Client{Transport: t}
+	}
+	return nil
+}
+
+func (o *CliOptions) Complete(cmd *cobra.Command, args []string) error {
+	// Complete Logger
+	o.CompleteLogger()
+
+	if o.UseKubeClient {
+		if err := o.CompleteKubeClient(); err != nil {
+			return err
+		}
+	} else {
+		// Complete CliConfig
+		if err := o.CompleteCliConfig(); err != nil {
+			return err
+		}
+
+		// Complete Client
+		if err := o.CompleteClient(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -210,8 +295,13 @@ func (o *CliOptions) Validate(cmd *cobra.Command, args []string) error {
 }
 
 // NewConnectRequestWithAuth wraps a connect.NewRequest with authorization header
-func NewConnectRequestWithAuth[T any](token string, message *T) *connect.Request[T] {
+func NewConnectRequestWithAuth[T any](o *CliConfig, message *T) *connect.Request[T] {
 	req := connect.NewRequest(message)
-	req.Header().Add("Authorization", token)
+	if len(o.Cookie) > 0 {
+		req.Header().Add("Cookie", o.Cookie)
+	}
+	if len(o.Token) > 0 {
+		req.Header().Add("Authorization", o.Token)
+	}
 	return req
 }

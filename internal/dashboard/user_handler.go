@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
@@ -32,7 +33,7 @@ func (s *Server) CreateUser(ctx context.Context, req *connect_go.Request[dashv1a
 
 	// create user
 	user, err := s.Klient.CreateUser(ctx, req.Msg.UserName, req.Msg.DisplayName,
-		req.Msg.Role, req.Msg.AuthType, convertDashv1alpha1UserAddonToUserAddon(req.Msg.Addons))
+		req.Msg.Role, req.Msg.AuthType, apiconv.ConvertDashv1alpha1UserAddonToUserAddon(req.Msg.Addons))
 	if err != nil {
 		return nil, ErrResponse(log, err)
 	}
@@ -142,19 +143,4 @@ func convertUserToDashv1alpha1User(user cosmov1alpha1.User) *dashv1alpha1.User {
 		Addons:      addons,
 		Status:      string(user.Status.Phase),
 	}
-}
-
-func convertDashv1alpha1UserAddonToUserAddon(addons []*dashv1alpha1.UserAddons) []cosmov1alpha1.UserAddon {
-	a := make([]cosmov1alpha1.UserAddon, len(addons))
-	for i, v := range addons {
-		addon := cosmov1alpha1.UserAddon{
-			Template: cosmov1alpha1.UserAddonTemplateRef{
-				Name:          v.Template,
-				ClusterScoped: v.ClusterScoped,
-			},
-			Vars: v.Vars,
-		}
-		a[i] = addon
-	}
-	return a
 }

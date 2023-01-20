@@ -3,6 +3,8 @@ package template
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/cosmo-workspace/cosmo/internal/cmd/template/useraddon"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/template/workspace"
 	cmdutil "github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 )
 
@@ -15,6 +17,8 @@ Template utility command.
 `,
 		Aliases: []string{"tmpl"},
 	}
+	workspace.AddCommand(tmplCmd, o)
+	useraddon.AddCommand(tmplCmd, o)
 
 	// 	tmplCmd.AddCommand(generateCmd(&cobra.Command{
 	// 		Use:     "generate --name TEMPLATE_NAME [< Input via Stdin or pipe]",

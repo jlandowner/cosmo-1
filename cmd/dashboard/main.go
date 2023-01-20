@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -44,10 +43,12 @@ type options struct {
 	ResponseTimeoutSeconds  int64
 	GracefulShutdownSeconds int64
 	Insecure                bool
+	ServerName              string
 	ServerPort              int
 	MaxAgeMinutes           int
 	WebhookPort             int
 	CertDir                 string
+	CACert                  string
 }
 
 func main() {
@@ -56,10 +57,12 @@ func main() {
 	flag.Int64Var(&o.GracefulShutdownSeconds, "graceful-shutdown-seconds", 10, "Graceful shutdown seconds")
 	flag.StringVar(&o.StaticFileDir, "serve-dir", "/app/public", "Static file dir to serve")
 	flag.BoolVar(&o.Insecure, "insecure", false, "start http server not https server")
+	flag.StringVar(&o.ServerName, "server-name", "cosmo-dashboard.cosmo-system.svc.cluster.local", "Server name for dashboard server")
 	flag.IntVar(&o.ServerPort, "port", 8443, "Port for dashboard server")
 	flag.IntVar(&o.WebhookPort, "webhook-port", 9443, "Port for webhook server")
 	flag.IntVar(&o.MaxAgeMinutes, "maxage-minutes", 720, "session maxage minutes")
 	flag.StringVar(&o.CertDir, "cert-dir", "/tmp/k8s-webhook-server/serving-certs", "cert directory which has tls.key, tls.crt, ca.crt")
+	flag.StringVar(&o.CACert, "ca", "ca.crt", "CA certificate file name in cert-dir")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -96,7 +99,9 @@ func main() {
 
 	if !o.Insecure {
 		if err = (&webhooks.PodWebhook{
-			RootCASecretKey: types.NamespacedName{Name: "cosmo-dashboard-cert", Namespace: "cosmo-system"},
+			CACertFile: o.CACert,
+			Hostname:   o.ServerName,
+			Port:       o.ServerPort,
 		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create pod webhook", "webhook", "Pod")
 			os.Exit(1)

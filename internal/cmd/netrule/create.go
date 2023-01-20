@@ -96,7 +96,7 @@ func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
 
 	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	res, err := c.UpsertNetworkRule(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+	res, err := c.UpsertNetworkRule(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
 		&dashboardv1alpha1.UpsertNetworkRuleRequest{
 			UserName: o.UserName,
 			WsName:   o.WorkspaceName,

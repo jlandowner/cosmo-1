@@ -140,7 +140,7 @@ install-manager-local: helm kubectl create-cluster ## Install cosmo contoller-ma
 		--set localRunTest.webhookEndpoint.port=9443 \
 		--set logLevel=$(LOGLEVEL)
 
-install-dashboard: helm kubectl create-cluster docker-build-dashboard ## Install cosmo contoller-manager resources.
+install-dashboard: # helm kubectl create-cluster docker-build-dashboard ## Install cosmo contoller-manager resources.
 	@echo ====== $@ ======
 	helm upgrade --install cosmo-dashboard ../../charts/cosmo-dashboard \
 		-n cosmo-system \
@@ -178,18 +178,8 @@ BASEURL := https://$(DASHBOARD_URL)
 
 add-user: kubectl cosmoctl
 	@echo ====== $@ ======
-	-cosmoctl user create tom --admin 2> /dev/null
-	export PASSWORD=`cosmoctl user reset-password tom | grep -Po "(?<=New password: ).*"` && \
-	bash -c 'until ( \
-		curl -L -c bin/cookie.txt -X POST -H "Content-Type: application/json" \
-		$(BASEURL)/dashboard.v1alpha1.AuthService/Login \
-		-d "{\"userName\":\"tom\",\"password\":\"$${PASSWORD}\"}" \
-	) do sleep 1; done' && \
-	bash -c ' \
-		curl -L -b bin/cookie.txt -X POST -H "Content-Type: application/json" \
-		$(BASEURL)/dashboard.v1alpha1.UserService/UpdateUserPassword \
-		-d "{\"userName\":\"tom\",\"currentPassword\":\"$${PASSWORD}\",\"newPassword\": \"vvv\"}" \
-	'
+	export PASSWORD=`cosmoctl user create tom --admin -k -q` && \
+	cosmoctl login $(DASHBOARD_URL) --user tom --password $$PASSWORD
 
 
 add-workspace: kubectl cosmoctl

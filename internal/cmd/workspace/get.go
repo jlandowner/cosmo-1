@@ -72,7 +72,7 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 
 	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	res, err := c.GetWorkspaces(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+	res, err := c.GetWorkspaces(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
 		&dashv1alpha1.GetWorkspacesRequest{
 			UserName: o.UserName,
 		}))

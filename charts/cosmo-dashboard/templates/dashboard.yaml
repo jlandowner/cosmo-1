@@ -62,8 +62,7 @@ spec:
         {{- if .Values.insecure }}
         - --insecure
         {{- else }}
-        - --tls-key=/app/cert/tls.key
-        - --tls-cert=/app/cert/tls.crt
+        - --cert-dir=/app/cert
         {{- end }}
         {{- if empty .Values.sessionAuthKey }}
         - --auth-key=$(COSMO_SESSION_AUTHKEY)

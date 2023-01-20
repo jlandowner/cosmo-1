@@ -13,20 +13,20 @@ import (
 	"github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
 
-type DeleteOption struct {
+type updatePasswordOption struct {
 	*cmdutil.CliOptions
 
 	UserName string
 }
 
-func DeleteCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
-	o := &DeleteOption{CliOptions: cliOpt}
+func updatePasswordCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
+	o := &updatePasswordOption{CliOptions: cliOpt}
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 	return cmd
 }
 
-func (o *DeleteOption) PreRunE(cmd *cobra.Command, args []string) error {
+func (o *updatePasswordOption) PreRunE(cmd *cobra.Command, args []string) error {
 	if err := o.Validate(cmd, args); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
@@ -36,7 +36,7 @@ func (o *DeleteOption) PreRunE(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *DeleteOption) Validate(cmd *cobra.Command, args []string) error {
+func (o *updatePasswordOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (o *DeleteOption) Validate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
+func (o *updatePasswordOption) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.CliOptions.Complete(cmd, args); err != nil {
 		return err
 	}
@@ -54,21 +54,21 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
-	log := o.Logr.WithName("delete_user")
+func (o *updatePasswordOption) RunE(cmd *cobra.Command, args []string) error {
+	log := o.Logr.WithName("update_password")
 	ctx := clog.IntoContext(o.Ctx, log)
 
 	c := dashboardv1alpha1connect.NewUserServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	res, err := c.DeleteUser(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
-		&dashv1alpha1.DeleteUserRequest{
-			UserName: o.UserName,
+	_, err := c.UpdateUserPassword(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
+		&dashv1alpha1.UpdateUserPasswordRequest{
+			UserName:        o.UserName,
+			CurrentPassword: "TODO",
+			NewPassword:     "TODO",
 		}))
 	if err != nil {
 		return err
 	}
-	log.Debug().Info("response: %v", res)
-
-	cmdutil.PrintfColorInfo(o.Out, "Successfully deleted user %s\n", o.UserName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully password updated\n")
 	return nil
 }

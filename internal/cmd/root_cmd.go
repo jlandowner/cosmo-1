@@ -35,7 +35,7 @@ MIT 2022 cosmo-workspace/cosmo
 	rootCmd.SetIn(o.In)
 	rootCmd.SetOut(o.Out)
 	rootCmd.SetErr(o.ErrOut)
-	rootCmd.PersistentFlags().IntVarP(&o.LogLevel, "verbose", "v", -1, "log level. -1:DISABLED, 0:INFO, 1:DEBUG, 2:ALL")
+	o.AddFlags(rootCmd)
 
 	versionCmd := &cobra.Command{
 		Use:   "version",

@@ -134,13 +134,17 @@ const (
 	// UserAuthTypeWebhook = "webhook"
 )
 
+var UserAuthTypeList []UserAuthType = []UserAuthType{
+	UserAuthTypePasswordSecert,
+}
+
 func (t UserAuthType) IsValid() bool {
-	switch t {
-	case UserAuthTypePasswordSecert:
-		return true
-	default:
-		return false
+	for _, v := range UserAuthTypeList {
+		if t == v {
+			return true
+		}
 	}
+	return false
 }
 
 func (t UserAuthType) String() string {

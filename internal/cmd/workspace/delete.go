@@ -65,7 +65,7 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 
 	c := dashboardv1alpha1connect.NewWorkspaceServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	res, err := c.DeleteWorkspace(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+	res, err := c.DeleteWorkspace(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
 		&dashv1alpha1.DeleteWorkspaceRequest{
 			UserName: o.UserName,
 			WsName:   o.WorkspaceName,

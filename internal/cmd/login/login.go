@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/mattn/go-isatty"
@@ -21,6 +23,7 @@ type LoginOption struct {
 
 	Password      string
 	PasswordStdin bool
+	CAFile        string
 }
 
 func LoginCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
@@ -29,9 +32,10 @@ func LoginCmd(cmd *cobra.Command, cliOpt *cmdutil.CliOptions) *cobra.Command {
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 	cmd.Flags().StringVar(&o.LoginUser, "user", "", "login user name (required)")
-	cmd.Flags().StringVar(&o.ServerEndpoint, "endpoint", "HOSTNAME:PORT", "endpoint for server (required)")
+	cmd.Flags().StringVar(&o.CAFile, "ca", "", "ca cert file path for server")
 	cmd.Flags().StringVar(&o.Password, "password", "", "WARNING: this flag may be insecure. use --password-stdin")
 	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input password by stdin")
+	cmd.Flags().BoolVar(&o.Insecure, "insecure", false, "use http not https")
 	return cmd
 }
 
@@ -49,13 +53,13 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.CliOptions.Validate(cmd, args); err != nil {
 		return err
 	}
+	if len(args) == 0 {
+		return errors.New("no args")
+	}
 	if o.LoginUser == "" {
 		return errors.New("--user is required")
 	}
-	if o.ServerEndpoint == "" {
-		return errors.New("--endpoint is required")
-	}
-	if o.Password == "" || !o.PasswordStdin {
+	if (o.Password == "" && !o.PasswordStdin) || (o.Password != "" && o.PasswordStdin) {
 		return errors.New("--password or --password-stdin is required")
 	}
 	if o.PasswordStdin {
@@ -67,8 +71,37 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
-	// Complete only logger
+	o.ServerEndpoint = args[0]
+
+	if o.CliConfigFilePath == "" || o.CliConfigFilePath == "$HOME/.cosmoctl" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		o.CliConfigFilePath = path.Join(home, ".cosmoctl")
+	}
+
+	// Complete logger
 	o.CompleteLogger()
+
+	if o.CAFile != "" {
+		ca, err := ioutil.ReadFile(o.CAFile)
+		if err != nil {
+			return err
+		}
+		o.CliConfig.ServerCA = ca
+	}
+
+	// Complete Client
+	if err := o.CompleteClient(); err != nil {
+		return err
+	}
+
+	if o.Insecure {
+		o.ServerEndpoint = "http://" + o.ServerEndpoint
+	} else {
+		o.ServerEndpoint = "https://" + o.ServerEndpoint
+	}
 
 	if o.PasswordStdin {
 		// input data from stdin
@@ -88,21 +121,22 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	log := o.Logr.WithName("login")
 	ctx := clog.IntoContext(o.Ctx, log)
 
-	c := dashboardv1alpha1connect.NewAuthServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
+	c := dashboardv1alpha1connect.NewAuthServiceClient(o.Client, o.ServerEndpoint)
 
 	res, err := c.Login(ctx, connect.NewRequest(&dashv1alpha1.LoginRequest{
 		UserName: o.LoginUser,
 		Password: o.Password,
 	}))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to login server: %w", err)
 	}
-	log.Debug().Info("response: %v", res)
+	log.Debug().Info(fmt.Sprintf("response: %v", res))
 
-	o.Token = res.Header().Get("Cookie")
+	o.Cookie = res.Header().Get("Cookie")
 
+	log.Debug().Info(o.CliConfigFilePath)
 	if err := o.CliOptions.CliConfig.Write(o.CliConfigFilePath); err != nil {
-		return err
+		return fmt.Errorf("failed to save config to %s: %w", o.CliConfigFilePath, err)
 	}
 
 	cmdutil.PrintfColorInfo(o.ErrOut, "Successfully Logined as User %s\n", o.LoginUser)

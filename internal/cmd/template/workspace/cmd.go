@@ -15,6 +15,7 @@ Manipulate WorkspaceTemplate.
 
 WorkspaceTemplate is a Template for Workspace
 `,
+		Aliases: []string{"ws"},
 	}
 
 	cmd.AddCommand(GenerateCmd(&cobra.Command{

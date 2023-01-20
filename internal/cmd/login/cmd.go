@@ -5,16 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func AddCommand(cmd *cobra.Command, o *cmdutil.CliOptions) {
-	loginCmd := &cobra.Command{
+func AddCommand(rootCmd *cobra.Command, o *cmdutil.CliOptions) {
+	cmd := LoginCmd(&cobra.Command{
 		Use:   "login",
 		Short: "Login to cosmo server",
 		Long: `
 Login to cosmo server
 `,
-	}
-
-	//TODO
-
-	cmd.AddCommand(loginCmd)
+	}, o)
+	rootCmd.AddCommand(cmd)
 }

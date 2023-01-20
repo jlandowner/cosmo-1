@@ -56,7 +56,7 @@ func (o *resetPasswordOption) RunE(cmd *cobra.Command, args []string) error {
 
 	// c := dashboardv1alpha1connect.NewUserServiceClient(o.Client, o.ServerEndpoint, connect.WithGRPC())
 
-	// // res, err := c.UpdateUserPassword(ctx, cmdutil.NewConnectRequestWithAuth(o.Token,
+	// // res, err := c.UpdateUserPassword(ctx, cmdutil.NewConnectRequestWithAuth(o.CliConfig,
 	// &dashv1alpha1.UpdateUserPasswordRequest{
 	// // 	UserName:    o.UserName,
 	// // 	CurrentPassword: ,
