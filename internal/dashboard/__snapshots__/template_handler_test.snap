@@ -45,7 +45,7 @@ SnapShot = """
 SnapShot = 'internal: failed to list UserAddon Templates'
 
 ['Dashboard server [Template] [GetUserAddonTemplates] ❌ fail with an unexpected error at list: Entry: normal-user, permission deny 1']
-SnapShot = 'permission_denied'
+SnapShot = 'internal: failed to list UserAddon Templates'
 
 ['Dashboard server [Template] [GetWorkspaceTemplates] ✅ success in normal context: Entry: admin-user, empty 1']
 SnapShot = """
@@ -92,4 +92,4 @@ SnapShot = """
 SnapShot = 'internal: failed to list WorkspaceTemplates'
 
 ['Dashboard server [Template] [GetWorkspaceTemplates] ❌ fail with an unexpected error at list: Entry: normal-user, permission deny 1']
-SnapShot = 'permission_denied'
+SnapShot = 'internal: failed to list WorkspaceTemplates'

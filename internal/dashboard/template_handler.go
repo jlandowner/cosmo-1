@@ -27,18 +27,16 @@ func (s *Server) TemplateServiceHandler(mux *http.ServeMux) {
 func (s *Server) GetWorkspaceTemplates(ctx context.Context, req *connect_go.Request[emptypb.Empty]) (*connect_go.Response[dashv1alpha1.GetWorkspaceTemplatesResponse], error) {
 	log := clog.FromContext(ctx).WithCaller()
 
-	if err := s.adminAuthentication(ctx); err != nil {
-		return nil, ErrResponse(log, err)
-	}
+	user := callerFromContext(ctx)
 
-	tmpls, err := s.Klient.ListWorkspaceTemplates(ctx)
+	tmpls, err := s.Klient.ListWorkspaceTemplates(ctx, user.Spec.Roles)
 	if err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
 	addonTmpls := make([]*dashv1alpha1.Template, 0, len(tmpls))
 	for _, v := range tmpls {
-		addonTmpls = append(addonTmpls, convertTemplateToDashv1alpha1Template(v.DeepCopy()))
+		addonTmpls = append(addonTmpls, convertTemplateToDashv1alpha1Template(v))
 	}
 
 	res := &dashv1alpha1.GetWorkspaceTemplatesResponse{
@@ -55,11 +53,9 @@ func (s *Server) GetWorkspaceTemplates(ctx context.Context, req *connect_go.Requ
 func (s *Server) GetUserAddonTemplates(ctx context.Context, req *connect_go.Request[emptypb.Empty]) (*connect_go.Response[dashv1alpha1.GetUserAddonTemplatesResponse], error) {
 	log := clog.FromContext(ctx).WithCaller()
 
-	if err := s.adminAuthentication(ctx); err != nil {
-		return nil, ErrResponse(log, err)
-	}
+	user := callerFromContext(ctx)
 
-	tmpls, err := s.Klient.ListUserAddonTemplates(ctx)
+	tmpls, err := s.Klient.ListUserAddonTemplates(ctx, user.Spec.Roles)
 	if err != nil {
 		return nil, ErrResponse(log, err)
 	}
