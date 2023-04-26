@@ -31,11 +31,42 @@ func (s *Server) UpdateUserDisplayName(ctx context.Context, req *connect_go.Requ
 	return connect_go.NewResponse(res), nil
 }
 
+func diff(slice1 []string, slice2 []string) []string {
+	var diff []string
+	// Loop two times, first to find slice1 strings not in slice2,
+	// second loop to find slice2 strings not in slice1
+	for i := 0; i < 2; i++ {
+		for _, s1 := range slice1 {
+			found := false
+			for _, s2 := range slice2 {
+				if s1 == s2 {
+					found = true
+					break
+				}
+			}
+			// String not found. We add it to return slice
+			if !found {
+				diff = append(diff, s1)
+			}
+		}
+		// Swap the slices
+		slice1, slice2 = slice2, slice1
+	}
+	return diff
+}
+
 func (s *Server) UpdateUserRole(ctx context.Context, req *connect_go.Request[dashv1alpha1.UpdateUserRoleRequest]) (*connect_go.Response[dashv1alpha1.UpdateUserRoleResponse], error) {
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "req", req)
 
-	if err := s.adminAuthentication(ctx); err != nil {
+	currentUser, err := s.Klient.GetUser(ctx, req.Msg.UserName)
+	if err != nil {
+		return nil, ErrResponse(log, err)
+	}
+
+	// group-admin can attach or detach only group-roles
+	changingRoles := diff(convertUserRolesToStringSlice(currentUser.Spec.Roles), req.Msg.Roles)
+	if err := s.adminAuthentication(ctx, validateCallerHasAdminForTheRoles(changingRoles)); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 

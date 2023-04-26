@@ -193,7 +193,7 @@ var _ = Describe("cosmoctl [user]", func() {
 		DescribeTable("✅ success in normal context:",
 			func(args ...string) {
 				test_CreateLoginUser("user1", "name1", nil, "password")
-				test_CreateLoginUser("user2", "name2", []cosmov1alpha1.UserRole{{Name: cosmov1alpha1.UserAdminRole}}, "password")
+				test_CreateLoginUser("user2", "name2", []cosmov1alpha1.UserRole{cosmov1alpha1.PrivilegedRole}, "password")
 				run_test(args...)
 			},
 			Entry(desc, "user", "get"),
@@ -258,7 +258,7 @@ var _ = Describe("cosmoctl [user]", func() {
 
 		run_test := func(args ...string) {
 			test_CreateLoginUser("user1", "name1", nil, "password")
-			test_CreateLoginUser("user2", "name2", []cosmov1alpha1.UserRole{{Name: cosmov1alpha1.UserAdminRole}}, "password")
+			test_CreateLoginUser("user2", "name2", []cosmov1alpha1.UserRole{cosmov1alpha1.PrivilegedRole}, "password")
 			By("---------------test start----------------")
 			rootCmd.SetArgs(args)
 			err := rootCmd.Execute()

@@ -115,7 +115,7 @@ func (s *Server) userAuthentication(ctx context.Context, userName string) error 
 	}
 
 	if caller.Name != userName {
-		if cosmov1alpha1.HasAdminRole(caller.Spec.Roles) {
+		if cosmov1alpha1.HasPrivilegedRole(caller.Spec.Roles) {
 			// Admin user have access to all resources
 			log.WithName("audit").Info(fmt.Sprintf("admin request %s", caller.Name), "username", caller.Name)
 		} else {
@@ -127,20 +127,47 @@ func (s *Server) userAuthentication(ctx context.Context, userName string) error 
 	return nil
 }
 
-func (s *Server) adminAuthentication(ctx context.Context) error {
-	log := clog.FromContext(ctx).WithCaller()
+func (s *Server) adminAuthentication(ctx context.Context, customAuthenFunc func(callerGroupRoleMap map[string]string) error) error {
+	log := clog.FromContext(ctx).WithCaller().WithName("audit")
 
 	caller := callerFromContext(ctx)
 	if caller == nil {
 		return kosmo.NewInternalServerError("invalid user authentication: NOT authorized", nil)
 	}
+	auditlog := log.WithValues("caller", caller.Name, "role", caller.Spec.Roles)
+
+	auditlog.Info("try admin request")
 
 	// Check if the user role is Admin
-	if !cosmov1alpha1.HasAdminRole(caller.Spec.Roles) {
-		log.Info("invalid admin authentication: NOT cosmo-admin", "username", caller.Name)
-		return kosmo.NewForbiddenError("", nil)
+	if cosmov1alpha1.HasPrivilegedRole(caller.Spec.Roles) {
+		auditlog.Info("privileged request")
+		return nil
 	}
 
-	log.WithName("audit").Info(fmt.Sprintf("admin request %s", caller.Name), "username", caller.Name)
-	return nil
+	// Check custom authen
+	var err error
+	if customAuthenFunc != nil {
+		err = customAuthenFunc(caller.GetGroupRoleMap())
+		if err == nil {
+			auditlog.Info("admin request is allowed")
+			return nil
+		}
+	}
+
+	auditlog.Info("invalid admin authentication")
+	return kosmo.NewForbiddenError("", nil)
+}
+
+func validateCallerHasAdminForTheRoles(roleNames []string) func(map[string]string) error {
+	return func(m map[string]string) error {
+		for _, r := range roleNames {
+			tryAccessGroup, _ := (cosmov1alpha1.UserRole{Name: r}).GetGroupAndRole()
+			callerRoleForTheGroup := m[tryAccessGroup]
+
+			if callerRoleForTheGroup != cosmov1alpha1.AdminRoleName {
+				return fmt.Errorf("no access for %s", callerRoleForTheGroup)
+			}
+		}
+		return nil
+	}
 }
