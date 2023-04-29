@@ -14,7 +14,7 @@ func (s *Server) UpdateUserDisplayName(ctx context.Context, req *connect_go.Requ
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "req", req)
 
-	if err := s.userAuthentication(ctx, req.Msg.UserName); err != nil {
+	if err := userAuthentication(ctx, req.Msg.UserName); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
@@ -66,7 +66,7 @@ func (s *Server) UpdateUserRole(ctx context.Context, req *connect_go.Request[das
 
 	// group-admin can attach or detach only group-roles
 	changingRoles := diff(convertUserRolesToStringSlice(currentUser.Spec.Roles), req.Msg.Roles)
-	if err := s.adminAuthentication(ctx, validateCallerHasAdminForTheRoles(changingRoles)); err != nil {
+	if err := adminAuthentication(ctx, validateCallerHasAdminForTheRolesFunc(changingRoles)); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
@@ -87,7 +87,7 @@ func (s *Server) UpdateUserPassword(ctx context.Context, req *connect_go.Request
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "username", req.Msg.UserName)
 
-	if err := s.userAuthentication(ctx, req.Msg.UserName); err != nil {
+	if err := userAuthentication(ctx, req.Msg.UserName); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 

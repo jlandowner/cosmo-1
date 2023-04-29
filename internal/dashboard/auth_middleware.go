@@ -106,7 +106,7 @@ func (s *Server) verifyAndGetLoginUser(ctx context.Context) (loginUser *cosmov1a
 	return loginUser, deadline, nil
 }
 
-func (s *Server) userAuthentication(ctx context.Context, userName string) error {
+func userAuthentication(ctx context.Context, userName string) error {
 	log := clog.FromContext(ctx).WithCaller()
 
 	caller := callerFromContext(ctx)
@@ -127,7 +127,7 @@ func (s *Server) userAuthentication(ctx context.Context, userName string) error 
 	return nil
 }
 
-func (s *Server) adminAuthentication(ctx context.Context, customAuthenFunc func(callerGroupRoleMap map[string]string) error) error {
+func adminAuthentication(ctx context.Context, customAuthenFunc func(callerGroupRoleMap map[string]string) error) error {
 	log := clog.FromContext(ctx).WithCaller().WithName("audit")
 
 	caller := callerFromContext(ctx)
@@ -158,9 +158,9 @@ func (s *Server) adminAuthentication(ctx context.Context, customAuthenFunc func(
 	return kosmo.NewForbiddenError("", nil)
 }
 
-func validateCallerHasAdminForTheRoles(roleNames []string) func(map[string]string) error {
+func validateCallerHasAdminForTheRolesFunc(tryRoleNames []string) func(map[string]string) error {
 	return func(m map[string]string) error {
-		for _, r := range roleNames {
+		for _, r := range tryRoleNames {
 			tryAccessGroup, _ := (cosmov1alpha1.UserRole{Name: r}).GetGroupAndRole()
 			callerRoleForTheGroup := m[tryAccessGroup]
 

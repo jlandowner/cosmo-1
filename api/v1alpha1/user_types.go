@@ -103,14 +103,9 @@ type UserRole struct {
 // if UserRole is `cosmo-admin`, it returns group: cosmo, role: admin
 // role is one of the [`admin`]
 func (r UserRole) GetGroupAndRole() (group string, role string) {
-	vv := strings.Split(r.Name, "-")
-	roles := []string{AdminRoleName}
-	if len(vv) > 0 {
-		for _, v := range roles {
-			if vv[len(vv)-1] == v {
-				return strings.Join(vv[:len(vv)-1], "-"), v
-			}
-		}
+	v := strings.Split(r.Name, "-")
+	if len(v) > 0 {
+		return strings.Join(v[:len(v)-1], "-"), v[len(v)-1]
 	}
 	return r.Name, ""
 }

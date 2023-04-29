@@ -25,16 +25,16 @@ func TestUserRole_GetGroupAndRole(t *testing.T) {
 			fields: fields{
 				Name: "cosmo-developer",
 			},
-			wantGroup: "cosmo-developer",
-			wantRole:  "",
+			wantGroup: "cosmo",
+			wantRole:  "developer",
 		},
 		{
 			name: "non-admin: middle",
 			fields: fields{
 				Name: "cosmo-admin-developer",
 			},
-			wantGroup: "cosmo-admin-developer",
-			wantRole:  "",
+			wantGroup: "cosmo-admin",
+			wantRole:  "developer",
 		},
 	}
 	for _, tt := range tests {

@@ -28,7 +28,7 @@ func (s *Server) CreateUser(ctx context.Context, req *connect_go.Request[dashv1a
 	log.Debug().Info("request", "req", req)
 
 	// group-admin user can create users which have only the their groups
-	if err := s.adminAuthentication(ctx, validateCallerHasAdminForTheRoles(req.Msg.Roles)); err != nil {
+	if err := adminAuthentication(ctx, validateCallerHasAdminForTheRolesFunc(req.Msg.Roles)); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
@@ -60,7 +60,7 @@ func (s *Server) GetUsers(ctx context.Context, req *connect_go.Request[emptypb.E
 	log.Debug().Info("request", "req", req)
 
 	// admin users can get all users
-	if err := s.adminAuthentication(ctx, func(callerGroupRoleMap map[string]string) error {
+	if err := adminAuthentication(ctx, func(callerGroupRoleMap map[string]string) error {
 		for _, role := range callerGroupRoleMap {
 			if role == cosmov1alpha1.AdminRoleName {
 				// Allow if caller has at least one administrative privilege.
@@ -92,7 +92,7 @@ func (s *Server) GetUser(ctx context.Context, req *connect_go.Request[dashv1alph
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "req", req)
 
-	if err := s.userAuthentication(ctx, req.Msg.UserName); err != nil {
+	if err := userAuthentication(ctx, req.Msg.UserName); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
@@ -117,7 +117,7 @@ func (s *Server) DeleteUser(ctx context.Context, req *connect_go.Request[dashv1a
 	}
 
 	// group-admin user can delete users which have only the their groups
-	if err := s.adminAuthentication(ctx, validateCallerHasAdminForTheRoles(convertUserRolesToStringSlice(targetUser.Spec.Roles))); err != nil {
+	if err := adminAuthentication(ctx, validateCallerHasAdminForTheRolesFunc(convertUserRolesToStringSlice(targetUser.Spec.Roles))); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 
