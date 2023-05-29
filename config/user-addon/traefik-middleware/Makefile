@@ -1,0 +1,10 @@
+all: useraddon
+
+PHONY: useraddon
+useraddon:
+	cat cosmo-username-headers.yaml | cosmoctl template generate --name cosmo-username-headers \
+		--user-addon \
+		--desc 'Traefik middleware for user authorization. DO NOT EDIT' \
+		--set-default-user-addon \
+		--disable-nameprefix \
+		-o useraddon-cosmo-username-headers.yaml
