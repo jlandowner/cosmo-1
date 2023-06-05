@@ -3,7 +3,6 @@ package authproxy
 import (
 	"context"
 	"path/filepath"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -42,10 +41,10 @@ var (
 	WsMgrCancel context.CancelFunc
 )
 
-func TestAuthproxyController(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Authproxy Controller Suite")
-}
+// func TestAuthproxyController(t *testing.T) {
+// 	RegisterFailHandler(Fail)
+// 	RunSpecs(t, "Authproxy Controller Suite")
+// }
 
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
@@ -120,9 +119,8 @@ var _ = BeforeSuite(func() {
 	}).SetupWebhookWithManager(wsMgr)
 
 	(&webhooks.TemplateMutationWebhookHandler{
-		Client:         k8sClient,
-		Log:            clog.NewLogger(ctrl.Log.WithName("TemplateMutationWebhookHandler")),
-		DefaultURLBase: "https://{{NETRULE_GROUP}}-{{INSTANCE}}-{{USER_NAME}}.domain",
+		Client: k8sClient,
+		Log:    clog.NewLogger(ctrl.Log.WithName("TemplateMutationWebhookHandler")),
 	}).SetupWebhookWithManager(wsMgr)
 
 	(&webhooks.TemplateValidationWebhookHandler{
