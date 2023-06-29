@@ -141,7 +141,7 @@ SnapShot = """
   \"ErrStatus\": {
     \"metadata\": {},
     \"status\": \"Failure\",
-    \"message\": \"admission webhook \\\"vworkspace.kb.io\\\" denied the request: network rules check failed: duplicate network rules hostPrefix=nw1,path=/,rules=[{\\\"protocol\\\":\\\"http\\\",\\\"portNumber\\\":8080,\\\"customHostPrefix\\\":\\\"main\\\",\\\"httpPath\\\":\\\"/\\\",\\\"public\\\":false},{\\\"protocol\\\":\\\"http\\\",\\\"portNumber\\\":1111,\\\"customHostPrefix\\\":\\\"nw1\\\",\\\"httpPath\\\":\\\"/\\\",\\\"public\\\":false},{\\\"protocol\\\":\\\"http\\\",\\\"portNumber\\\":2222,\\\"customHostPrefix\\\":\\\"nw1\\\",\\\"httpPath\\\":\\\"/\\\",\\\"public\\\":false}]\",
+    \"message\": \"admission webhook \\\"vworkspace.kb.io\\\" denied the request: network rules check failed: duplicate network rules: {\\\"protocol\\\":\\\"http\\\",\\\"portNumber\\\":2222,\\\"customHostPrefix\\\":\\\"nw1\\\",\\\"httpPath\\\":\\\"/\\\",\\\"public\\\":false}\",
     \"code\": 403
   }
 }
