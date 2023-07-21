@@ -17,7 +17,7 @@ categories:
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
 template: |
-  ## Changes
+  ## Changes from $PREVIOUS_TAG
   $CHANGES
 
   ## Docker Images
