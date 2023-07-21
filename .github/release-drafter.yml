@@ -23,6 +23,7 @@ template: |
   ## Docker Images
   [ghcr.io/cosmo-workspace/cosmo-controller-manager:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-controller-manager)
   [ghcr.io/cosmo-workspace/cosmo-dashboard:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-dashboard)
+  [ghcr.io/cosmo-workspace/cosmo-traefik-plugins:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-traefik-plugins)
 
   ## How to install
 
