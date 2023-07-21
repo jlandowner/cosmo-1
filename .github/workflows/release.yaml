@@ -2,13 +2,13 @@ name: Release build
 on:
   workflow_dispatch:
     inputs:
-      tag:
+      version:
         type: string
         required: true
-        description: "Git tag to create(e.g. v1.0.0 or v1.0.0-rc1)"
+        description: "Release version(e.g. 1.0.0 or 1.0.0-rc1)"
       prerelease:
         type: boolean
-        description: "Mark prerelease or not"
+        description: "Mark as prerelease"
 
 jobs:
   fix_version:
@@ -20,14 +20,14 @@ jobs:
           fetch-depth: 0
           ref: update-action-test
       - name: Update-version
-        run: make update-version VERSION=${{ inputs.tag }}
+        run: make update-version VERSION=v${{ inputs.version }}
       - name: Commit updates
         uses: EndBug/add-and-commit@v7
         with:
           branch: update-action-test
-          message: "Bump version: ${{ inputs.tag }}"
+          message: "Bump version: v${{ inputs.version }}"
     outputs:
-      version: ${{ inputs.tag }}
+      version: v${{ inputs.version }}
 
   goreleaser:
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
         with:
           name: "${{ needs.fix_version.outputs.version }} 🌈"
           tag: ${{ needs.fix_version.outputs.version }}
-          version: ${{ needs.fix_version.outputs.version }}
+          version: ${{ inputs.version }}
           prerelease: ${{ inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
