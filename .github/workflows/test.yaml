@@ -1,0 +1,34 @@
+name: test
+on:
+  workflow_dispatch:
+
+jobs:
+  vite-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: update-action-test
+      - name: Setup
+        uses: actions/setup-go@v2
+      - name: Run test
+        run: |
+          cd web/dashboard-ui
+          yarn install
+          yarn testrun
+
+  go-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: update-action-test
+      - name: Setup Go
+        uses: actions/setup-go@v2
+      - name: Run test
+        run: |
+          make test
