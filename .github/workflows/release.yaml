@@ -46,7 +46,7 @@ jobs:
       - name: Create tag (not push)
         run: |
           git tag "${{ needs.fix_version.outputs.version }}"
-        # git push origin "${{ needs.fix_version.outputs.version }}"
+          git push origin "${{ needs.fix_version.outputs.version }}"
       - name: Delete drafts
         uses: hugo19941994/delete-draft-releases@v1.0.0
         env:
@@ -62,6 +62,7 @@ jobs:
       - name: release-drafter
         uses: release-drafter/release-drafter@v5
         with:
+          name: "${{ needs.fix_version.outputs.version }} 🌈"
           tag: ${{ needs.fix_version.outputs.version }}
           version: ${{ needs.fix_version.outputs.version }}
           prerelease: ${{ inputs.prerelease }}
