@@ -1,4 +1,4 @@
-name: Release build
+name: Release 🚀
 on:
   workflow_dispatch:
     inputs:
@@ -11,7 +11,7 @@ on:
         description: "Mark as prerelease"
 
 jobs:
-  fix_version:
+  update-source:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,13 +26,11 @@ jobs:
         with:
           branch: main
           message: "Bump version: v${{ inputs.version }}"
-    outputs:
-      version: v${{ inputs.version }}
 
-  goreleaser:
+  create-release:
     runs-on: ubuntu-latest
     needs:
-      - fix_version
+      - update-source
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -45,8 +43,8 @@ jobs:
           go-version: "1.20"
       - name: Create tag
         run: |
-          git tag "${{ needs.fix_version.outputs.version }}"
-          git push origin "${{ needs.fix_version.outputs.version }}"
+          git tag v${{ inputs.version }}
+          git push origin v${{ inputs.version }}
       - name: Delete drafts
         uses: hugo19941994/delete-draft-releases@v1.0.0
         env:
@@ -62,17 +60,19 @@ jobs:
       - name: release-drafter
         uses: release-drafter/release-drafter@v5
         with:
-          name: "${{ needs.fix_version.outputs.version }} 🌈"
-          tag: ${{ needs.fix_version.outputs.version }}
+          name: "v${{ inputs.version }} 🌈"
+          tag: v${{ inputs.version }}
           version: ${{ inputs.version }}
           prerelease: ${{ inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      tag: v${{ inputs.version }}
 
-  controller-manager:
+  docker-build-controller-manager:
     runs-on: ubuntu-latest
     needs:
-      - goreleaser
+      - create-release
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -95,14 +95,14 @@ jobs:
         with:
           push: true
           file: dockerfile/controller-manager.Dockerfile
-          tags: ${{ 'ghcr.io/' }}${{ github.repository }}${{ '-controller-manager' }}:${{ needs.fix_version.outputs.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/cosmo-controller-manager:${{ needs.create-release.outputs.tag }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
-  dashboard:
+  docker-build-dashboard:
     runs-on: ubuntu-latest
     needs:
-      - goreleaser
+      - create-release
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -125,14 +125,14 @@ jobs:
         with:
           push: true
           file: dockerfile/dashboard.Dockerfile
-          tags: ${{ 'ghcr.io/' }}${{ github.repository }}${{ '-dashboard' }}:${{ needs.fix_version.outputs.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/cosmo-dashboard:${{ needs.create-release.outputs.tag }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
-  traefik-plugins:
+  docker-build-traefik-plugins:
     runs-on: ubuntu-latest
     needs:
-      - goreleaser
+      - create-release
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -155,6 +155,6 @@ jobs:
         with:
           push: true
           file: dockerfile/traefik-plugins.Dockerfile
-          tags: ${{ 'ghcr.io/' }}${{ github.repository }}${{ '-traefik-plugins' }}:${{ needs.fix_version.outputs.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/cosmo-traefik-plugins:${{ needs.create-release.outputs.tag }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
