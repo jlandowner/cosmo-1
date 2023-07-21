@@ -17,12 +17,13 @@ categories:
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
 template: |
-  ## Changes
+  ## Changes from $PREVIOUS_TAG
   $CHANGES
 
   ## Docker Images
   [ghcr.io/cosmo-workspace/cosmo-controller-manager:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-controller-manager)
   [ghcr.io/cosmo-workspace/cosmo-dashboard:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-dashboard)
+  [ghcr.io/cosmo-workspace/cosmo-traefik-plugins:v$RESOLVED_VERSION](https://github.com/cosmo-workspace/cosmo/pkgs/container/cosmo-traefik-plugins)
 
   ## How to install
 
