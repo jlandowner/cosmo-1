@@ -4,7 +4,7 @@ kind: Kustomization
 images:
 - name: dashboard
   newName: cosmo-dashboard
-  newTag: v0.101.0-rc1
+  newTag: v0.102.0-rc1
 
 resources:
 - dashboard.yaml
