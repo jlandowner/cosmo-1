@@ -1,29 +1,33 @@
 name: Release build
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        type: string
+        required: true
+        description: "Git tag to create(e.g. v1.0.0 or v1.0.0-rc1)"
+      prerelease:
+        type: boolean
+        description: "Mark prerelease or not"
 
 jobs:
   fix_version:
     runs-on: ubuntu-latest
     steps:
-      - id: release_drafter
-        uses: release-drafter/release-drafter@v5
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: main
       - name: Update-version
-        run: make update-version VERSION=${{ steps.release_drafter.outputs.tag_name }}
+        run: make update-version VERSION=${{ inputs.tag }}
       - name: Commit updates
         uses: EndBug/add-and-commit@v7
         with:
           branch: main
-          message: "Bump version: ${{ steps.release_drafter.outputs.tag_name }}"
+          message: "Bump version: ${{ inputs.tag }}"
     outputs:
-      version: ${{ steps.release_drafter.outputs.tag_name }}
+      version: ${{ inputs.tag }}
 
   goreleaser:
     runs-on: ubuntu-latest
@@ -42,7 +46,7 @@ jobs:
       - name: Create tag (not push)
         run: |
           git tag "${{ needs.fix_version.outputs.version }}"
-        # git push origin "${{ needs.fix_version.outputs.version }}"
+          git push origin "${{ needs.fix_version.outputs.version }}"
       - name: Delete drafts
         uses: hugo19941994/delete-draft-releases@v1.0.0
         env:
@@ -58,7 +62,10 @@ jobs:
       - name: release-drafter
         uses: release-drafter/release-drafter@v5
         with:
+          name: "${{ needs.fix_version.outputs.version }} 🌈"
+          tag: ${{ needs.fix_version.outputs.version }}
           version: ${{ needs.fix_version.outputs.version }}
+          prerelease: ${{ inputs.prerelease }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
