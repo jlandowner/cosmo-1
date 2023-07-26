@@ -38,11 +38,30 @@ export const UserAddonChangeDialog: React.FC<{ onClose: () => void, user: User }
     });
 
     const { fields: addonsFields, replace: replaceAddons } = useFieldArray({ control, name: "addons" });
+    console.log("TODO: addonsFields", addonsFields)
 
     const templ = useTemplates();
     useEffect(() => { templ.getUserAddonTemplates(); }, []);  // eslint-disable-line
     useEffect(() => {
-        replaceAddons(templ.templates.map(t => ({ template: t, enable: false, vars: [] })));
+        console.log("TODO: user.addons", user.addons)
+        console.log("TODO: templ", templ.templates)
+        const tt = templ.templates.map(t => ({ template: t, enable: false, vars: [] }));
+        console.log("TODO: tt", tt)
+
+        // tt.map(t => {
+        //     user.addons.forEach(a => {
+        //         if (t.template.name === a.template) {
+        //             let arr: string[] = [];
+        //             t.template.requiredVars.forEach(v => {
+        //                 arr.push(a.vars[v.varName]);
+        //             });
+        //             return { template: t, enable: true, vars: arr }
+        //         }
+        //     });
+        //     return { template: t, enable: false, vars: [] }
+        // });
+
+        replaceAddons(tt);
     }, [templ.templates]);  // eslint-disable-line
 
     return (
