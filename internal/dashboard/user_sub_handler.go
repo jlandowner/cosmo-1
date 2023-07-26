@@ -34,18 +34,17 @@ func (s *Server) UpdateUserAddons(ctx context.Context, req *connect_go.Request[d
 	// 	}
 	// }
 
-	// addons := convertDashv1alpha1UserAddonToUserAddon(req.Msg.Addons)
-	// user, err := s.Klient.UpdateUser(ctx, req.Msg.UserName, kosmo.UpdateUserOpts{
-	// 	UserRoles: []string{"-"},
-	// 	Addons:    &addons,
-	// })
-	// if err != nil {
-	// 	return nil, ErrResponse(log, err)
-	// }
+	addons := convertDashv1alpha1UserAddonToUserAddon(req.Msg.Addons)
+	user, err := s.Klient.UpdateUser(ctx, req.Msg.UserName, kosmo.UpdateUserOpts{
+		UserAddons: addons,
+	})
+	if err != nil {
+		return nil, ErrResponse(log, err)
+	}
 
 	res := &dashv1alpha1.UpdateUserAddonsResponse{
 		Message: "Successfully updated",
-		// User:    convertUserToDashv1alpha1User(*user),
+		User:    convertUserToDashv1alpha1User(*user),
 	}
 	log.Info(res.Message, "username", req.Msg.UserName)
 	return connect_go.NewResponse(res), nil
@@ -100,10 +99,6 @@ func (s *Server) UpdateUserRole(ctx context.Context, req *connect_go.Request[das
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "req", req)
 
-	if req.Msg.Roles == nil {
-		req.Msg.Roles = []string{}
-	}
-
 	currentUser, err := s.Klient.GetUser(ctx, req.Msg.UserName)
 	if err != nil {
 		return nil, ErrResponse(log, err)
@@ -115,7 +110,8 @@ func (s *Server) UpdateUserRole(ctx context.Context, req *connect_go.Request[das
 		return nil, ErrResponse(log, err)
 	}
 
-	user, err := s.Klient.UpdateUser(ctx, req.Msg.UserName, kosmo.UpdateUserOpts{UserRoles: req.Msg.Roles})
+	roles := convertStringSliceToUserRoles(req.Msg.Roles)
+	user, err := s.Klient.UpdateUser(ctx, req.Msg.UserName, kosmo.UpdateUserOpts{UserRoles: roles})
 	if err != nil {
 		return nil, ErrResponse(log, err)
 	}
