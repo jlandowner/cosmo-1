@@ -66,7 +66,7 @@ func (o *updateOption) Complete(cmd *cobra.Command, args []string) error {
 	if o.Role != nil {
 		o.roles = make([]cosmov1alpha1.UserRole, 0, len(o.Role))
 		for _, v := range o.Role {
-			o.roles = append(o.roles, cosmov1alpha1.UserRole{v})
+			o.roles = append(o.roles, cosmov1alpha1.UserRole{Name: v})
 		}
 	}
 	return nil
