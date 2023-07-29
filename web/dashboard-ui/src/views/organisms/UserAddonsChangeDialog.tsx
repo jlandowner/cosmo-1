@@ -38,36 +38,23 @@ export const UserAddonChangeDialog: React.FC<{ onClose: () => void, user: User }
     });
 
     const { fields: addonsFields, replace: replaceAddons } = useFieldArray({ control, name: "addons" });
-    console.log("TODO: addonsFields", addonsFields)
+
+    const currentAddons = new Map<string, UserAddon>();
+    user.addons.forEach((v) => {
+        currentAddons.set(v.template, v)
+    })
 
     const templ = useTemplates();
     useEffect(() => { templ.getUserAddonTemplates(); }, []);  // eslint-disable-line
     useEffect(() => {
-        console.log("TODO: user.addons", user.addons)
-        console.log("TODO: templ", templ.templates)
         const tt = templ.templates.map(t => ({ template: t, enable: false, vars: [] }));
-        console.log("TODO: tt", tt)
-
-        // tt.map(t => {
-        //     user.addons.forEach(a => {
-        //         if (t.template.name === a.template) {
-        //             let arr: string[] = [];
-        //             t.template.requiredVars.forEach(v => {
-        //                 arr.push(a.vars[v.varName]);
-        //             });
-        //             return { template: t, enable: true, vars: arr }
-        //         }
-        //     });
-        //     return { template: t, enable: false, vars: [] }
-        // });
-
         replaceAddons(tt);
     }, [templ.templates]);  // eslint-disable-line
 
     return (
         <Dialog open={true}
             fullWidth maxWidth={'xs'}>
-            <DialogTitle>Change Role</DialogTitle>
+            <DialogTitle>Change UserAddons</DialogTitle>
             <form onSubmit={handleSubmit((inp: Inputs) => {
                 console.log(inp)
                 const userAddons = inp.addons.filter(v => v.enable)
@@ -101,7 +88,7 @@ export const UserAddonChangeDialog: React.FC<{ onClose: () => void, user: User }
                                 <React.Fragment key={field.id}>
                                     <FormControlLabel label={field.template.name} control={
                                         <Tooltip title={field.template.description || "No description"} placement="bottom" arrow enterDelay={1000}>
-                                            <Checkbox defaultChecked={field.template.isDefaultUserAddon || false}
+                                            <Checkbox defaultChecked={Boolean(currentAddons.get(field.template.name)) || field.template.isDefaultUserAddon || false}
                                                 {...registerMui(register(`addons.${index}.enable` as const, {
                                                     required: { value: field.template.isDefaultUserAddon || false, message: "Required" },
                                                 }))}
@@ -117,7 +104,9 @@ export const UserAddonChangeDialog: React.FC<{ onClose: () => void, user: User }
                                                 <TextField key={field.id + j}
                                                     size="small" fullWidth
                                                     label={required.varName}
-                                                    defaultValue={required.defaultValue}
+                                                    defaultValue={currentAddons.get(field.template.name)
+                                                        && currentAddons.get(field.template.name)!.vars[required.varName]
+                                                        || required.defaultValue}
                                                     {...registerMui(register(`addons.${index}.vars.${j}` as const, {
                                                         required: watch('addons')[index].enable,
                                                     }))}
