@@ -7,7 +7,7 @@
   resolved "https://registry.yarnpkg.com/@adobe/css-tools/-/css-tools-4.2.0.tgz#e1a84fca468f4b337816fcb7f0964beb620ba855"
   integrity sha512-E09FiIft46CmH5Qnjb0wsW54/YQd69LsxeKUOWawmws1XWvyFGURnAChH0mlr7YPFR1ofwvUQfcL0J3lMxXqPA==
 
-"@ahooksjs/use-url-state@^3.5.1":
+"@ahooksjs/use-url-state@3.5.1":
   version "3.5.1"
   resolved "https://registry.yarnpkg.com/@ahooksjs/use-url-state/-/use-url-state-3.5.1.tgz#c3ad04e98cbcbc8f9eba476bcbd3237e9809aa5b"
   integrity sha512-XTrOLZKOAXahDD1Evg+aSN6qNzoh/FuvRKbUtB/0RhYvz57tyXRPbED0KXK4h2C3ZyHUKBJcVCSDcd6EsTyMyQ==
