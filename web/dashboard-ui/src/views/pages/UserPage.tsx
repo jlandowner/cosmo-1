@@ -1,6 +1,6 @@
 import useUrlState from "@ahooksjs/use-url-state";
-import { AddTwoTone, Badge, Clear, DeleteTwoTone, ExpandLess, ExpandMore, ManageAccountsTwoTone, MoreVert, RefreshTwoTone, SearchTwoTone } from "@mui/icons-material";
-import { Box, Card, CardHeader, Chip, Collapse, Divider, Fab, Grid, IconButton, InputAdornment, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { AddTwoTone, Badge, Clear, DeleteTwoTone, ExpandLess, ExpandMore, ManageAccountsTwoTone, MoreVert, RefreshTwoTone, SearchTwoTone, Tune, ViewList, ViewModule } from "@mui/icons-material";
+import { Box, Card, CardContent, CardHeader, Chip, Collapse, Divider, Fab, Grid, IconButton, InputAdornment, List, ListItem, ListItemIcon, ListItemText, Menu, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableRow, TextField, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useLogin } from "../../components/LoginProvider";
 import { User } from "../../proto/gen/dashboard/v1alpha1/user_pb";
@@ -71,16 +71,106 @@ const UserMenu: React.VFC<{ user: User }> = ({ user: us }) => {
   </>);
 };
 
+
+const UserListItem: React.VFC<{ user: User, }> = ({ user }) => {
+  console.log('UserListItem');
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const theme = useTheme();
+  const upSM = useMediaQuery(theme.breakpoints.up('sm'));
+
+  return <Card>
+    <CardHeader
+      avatar={<NameAvatar name={user.displayName} />}
+      title={<Stack direction='row' sx={{ mr: 2 }} onClick={() => setIsOpen(!isOpen)}>
+        <Typography variant='subtitle1'>{user.name}</Typography>
+        <Box sx={{ flex: '1 1 auto' }} />
+        <div style={{ textAlign: 'right', maxWidth: upSM ? undefined : 100, whiteSpace: 'nowrap' }}>
+          <Box component="div" sx={{ textAlign: 'right', justifyContent: "flex-end", textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            {user.roles && user.roles.map((v, i) => {
+              return <Chip color={isPrivilegedRole(v) ? "error" : isAdminRole(v) ? "warning" : "default"} size='small' key={i} label={v} />
+            })}
+          </Box>
+        </div>
+      </Stack>}
+      subheader={user.displayName}
+      action={<UserMenu user={user} />}
+    />
+    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+      <CardContent>
+        <Typography variant="body2">Addons</Typography>
+        <List component="nav" >
+          {user.addons.map((v, i) =>
+            <div key={i}>
+              <Divider />
+              <ListItem>
+                <ListItemIcon>
+                  <Tune />
+                </ListItemIcon>
+                <ListItemText
+                  disableTypography={true}
+                  primary={v.template}
+                  secondary={Object.keys(v.vars).length > 0 &&
+                    <TableContainer component={Paper} sx={{ mt: 1 }}>
+                      <Table aria-label={v.template}>
+                        <TableBody>
+                          {Object.keys(v.vars).map((key, j) =>
+                            <TableRow key={j} sx={{ '&:last-child td, &:last-child th': { border: 0 } }} >
+                              <TableCell component="th" scope="row">{key}</TableCell>
+                              <TableCell align="right">{v.vars[key]}</TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  }
+                />
+              </ListItem>
+            </div>
+          )}
+        </List>
+      </CardContent>
+    </Collapse>
+  </Card>;
+}
+
+
+const UserCardItem: React.VFC<{ user: User, }> = ({ user }) => {
+  console.log('UserCardItem');
+
+  const userInfoDialogDispatch = UserInfoDialogContext.useDispatch();
+
+  return <Card>
+    <CardHeader
+      avatar={<NameAvatar name={user.displayName} />}
+      title={<Stack direction='row' sx={{ mr: 2 }} onClick={() => userInfoDialogDispatch(true, { user: user, defaultOpenUserAddon: true })}>
+        <Typography variant='subtitle1'>{user.name}</Typography>
+        <Box sx={{ flex: '1 1 auto' }} />
+        <div style={{ textAlign: 'right', maxWidth: 100, whiteSpace: 'nowrap' }}>
+          <Box component="div" sx={{ textAlign: 'right', justifyContent: "flex-end", textOverflow: 'ellipsis', overflow: 'hidden' }}>
+            {user.roles && user.roles.map((v, i) => {
+              return <Chip color={isPrivilegedRole(v) ? "error" : isAdminRole(v) ? "warning" : "default"} size='small' key={i} label={v} />
+            })}
+          </Box>
+        </div>
+      </Stack>}
+      subheader={user.displayName}
+      action={<UserMenu user={user} />}
+    />
+  </Card>;
+}
+
 const UserList: React.VFC = () => {
   const hooks = useUserModule();
   const { loginUser } = useLogin();
   const userCreateDialogDispatch = UserCreateDialogContext.useDispatch();
-  const userInfoDialogDispatch = UserInfoDialogContext.useDispatch();
 
   const [showFilter, setShowFilter] = useState<boolean>(false);
   const [urlParam, setUrlParam] = useUrlState({
     "search": "",
     "filterRoles": [],
+    "view": "list",
   }, { parseOptions: { arrayFormat: 'comma' }, stringifyOptions: { arrayFormat: 'comma', skipEmptyString: true } });
 
   const filterRoles: string[] = typeof urlParam.filterRoles === 'string' ? [urlParam.filterRoles] : urlParam.filterRoles;
@@ -112,6 +202,9 @@ const UserList: React.VFC = () => {
 
   useEffect(() => { hooks.getUsers() }, []); // eslint-disable-line
 
+  const isListView = urlParam.view == 'list'
+  const isCardView = urlParam.view == 'card'
+
   return (<>
     <Paper sx={{ minWidth: 320, maxWidth: 1200, mb: 1, p: 1 }}>
       <Stack direction='row' alignItems='center' spacing={2}>
@@ -133,6 +226,16 @@ const UserList: React.VFC = () => {
           sx={{ flexGrow: 0.5 }}
         />
         <Box sx={{ flexGrow: 1 }} />
+        {isListView && <Tooltip title="CardView" placement="top">
+          <IconButton color="inherit" onClick={() => { setUrlParam({ view: "card" }) }}>
+            <ViewModule />
+          </IconButton>
+        </Tooltip>}
+        {isCardView && <Tooltip title="ListView" placement="top">
+          <IconButton color="inherit" onClick={() => { setUrlParam({ view: "list" }) }}>
+            <ViewList />
+          </IconButton>
+        </Tooltip>}
         <Tooltip title="Refresh" placement="top">
           <IconButton color="inherit" onClick={() => { hooks.getUsers() }}>
             <RefreshTwoTone />
@@ -183,29 +286,12 @@ const UserList: React.VFC = () => {
         .filter((us) => us.status === 'Active')
         .filter((us) => (filterRoles.length == 0 || isUserMatchedToFilterRoles(us)))
         .map((us) =>
-          <Grid item key={us.name} xs={12} sm={6} md={6} lg={4}>
-            <Card>
-              <CardHeader
-                avatar={<NameAvatar name={us.displayName} onClick={() => { userInfoDialogDispatch(true, { user: us }) }} />}
-                title={<Stack direction='row' sx={{ mr: 2, maxWidth: 350 }}
-                  onClick={() => { userInfoDialogDispatch(true, { user: us }) }}>
-                  <Typography variant='subtitle1'>{us.name}</Typography>
-                  <Box sx={{ flex: '1 1 auto' }} />
-                  <div style={{ maxWidth: 150, whiteSpace: 'nowrap' }}>
-                    <Box component="div" sx={{ justifyContent: "flex-end", textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                      {us.roles && us.roles.map((v, i) => {
-                        return <Chip color={isPrivilegedRole(v) ? "error" : isAdminRole(v) ? "warning" : "default"} size='small' key={i} label={v} />
-                      })}
-                    </Box>
-                  </div>
-                </Stack>}
-                subheader={us.displayName}
-                action={<UserMenu user={us} />}
-              />
-            </Card>
+          <Grid item key={us.name} xs={12} sm={isListView ? 12 : 6} md={isListView ? 12 : 6} lg={isListView ? 12 : 4}>
+            {isListView && <UserListItem user={us} />}
+            {isCardView && <UserCardItem user={us} />}
           </Grid>
         )}
-    </Grid>
+    </Grid >
   </>);
 };
 
