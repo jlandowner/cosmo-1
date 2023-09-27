@@ -2,7 +2,8 @@ import { Box, CircularProgress, CssBaseline, Stack, Typography } from '@mui/mate
 import { useSnackbar } from 'notistack';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../proto/gen/dashboard/v1alpha1/user_pb';
-import { useAuthService, useUserService } from '../services/DashboardServices';
+import { useAuthService, useUserService, useWebAuthnService } from '../services/DashboardServices';
+import { base64url } from './Base64';
 import { useProgress } from './ProgressProvider';
 
 
@@ -26,6 +27,70 @@ const useLoginModule = () => {
   const { setMask, releaseMask } = useProgress();
   const userService = useUserService();
   const authService = useAuthService();
+  const webauthnService = useWebAuthnService();
+
+  /**
+   * loginWithWebAuthn
+   */
+  const loginWithWebAuthn = async (userName: string) => {
+    console.log('loginWithWebAuthn start');
+    try {
+      const credId = localStorage.getItem(`credId`);
+      if (credId === null) {
+        throw Error('credId is null');
+      }
+
+      const beginResp = await webauthnService.beginLogin({ userName: userName });
+      const options = JSON.parse(beginResp.credentialRequestOptions);
+
+      const opt: CredentialRequestOptions = JSON.parse(JSON.stringify(options));
+      console.log('credentialRequestOptions', opt);
+
+      if (options.publicKey?.challenge) {
+        opt.publicKey!.challenge = base64url.decode(options.publicKey?.challenge);
+      }
+
+      let allowed = false;
+      for (let index = 0; index < options.publicKey?.allowCredentials.length; index++) {
+        if (options.publicKey?.allowCredentials[index].id === credId) { allowed = true };
+        if (options.publicKey?.allowCredentials[index].id) {
+          opt.publicKey!.allowCredentials[index].id = base64url.decode(options.publicKey?.allowCredentials[index].id);
+        }
+      }
+      if (!allowed) { throw Error('not allowed'); }
+      console.log('credentialRequestOptions', opt);
+
+      const cred = await navigator.credentials.get(opt);
+      if (cred === null) {
+        console.log("cred is null");
+        throw Error('credential is null');
+      }
+      console.log('cred', cred);
+
+      const credential = {
+        id: cred.id,
+        type: cred.type,
+        rawId: base64url.encode(cred.rawId),
+        response: {
+          clientDataJSON: base64url.encode(cred.response.clientDataJSON),
+          authenticatorData: base64url.encode(cred.response.authenticatorData),
+          signature: base64url.encode(cred.response.signature),
+          userHandle: base64url.encode(cred.response.userHandle),
+        },
+      };
+
+      const finResp = await webauthnService.finishLogin({ userName: userName, credentialRequestResult: JSON.stringify(credential) });
+      await getMyUserInfo(userName);
+      console.log('loginWithWebAuthn end', finResp);
+      return;
+    }
+    catch (error) {
+      setLoginUser(undefined);
+      console.log('loginWithWebAuthn error');
+      handleError(error);
+      throw error;
+    }
+  }
 
 
   /**
@@ -159,6 +224,7 @@ const useLoginModule = () => {
     loginUser,
     verifyLogin,
     login,
+    loginWithWebAuthn,
     logout,
     refreshUserInfo,
     updataPassword,
