@@ -51,6 +51,9 @@ const (
 	// WebAuthnServiceListCredentialsProcedure is the fully-qualified name of the WebAuthnService's
 	// ListCredentials RPC.
 	WebAuthnServiceListCredentialsProcedure = "/dashboard.v1alpha1.WebAuthnService/ListCredentials"
+	// WebAuthnServiceUpdateCredentialProcedure is the fully-qualified name of the WebAuthnService's
+	// UpdateCredential RPC.
+	WebAuthnServiceUpdateCredentialProcedure = "/dashboard.v1alpha1.WebAuthnService/UpdateCredential"
 	// WebAuthnServiceDeleteCredentialProcedure is the fully-qualified name of the WebAuthnService's
 	// DeleteCredential RPC.
 	WebAuthnServiceDeleteCredentialProcedure = "/dashboard.v1alpha1.WebAuthnService/DeleteCredential"
@@ -68,6 +71,8 @@ type WebAuthnServiceClient interface {
 	FinishLogin(context.Context, *connect_go.Request[v1alpha1.FinishLoginRequest]) (*connect_go.Response[v1alpha1.FinishLoginResponse], error)
 	// ListCredentials
 	ListCredentials(context.Context, *connect_go.Request[v1alpha1.ListCredentialsRequest]) (*connect_go.Response[v1alpha1.ListCredentialsResponse], error)
+	// UpdateCredential
+	UpdateCredential(context.Context, *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error)
 	// DeleteCredential
 	DeleteCredential(context.Context, *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error)
 }
@@ -107,6 +112,11 @@ func NewWebAuthnServiceClient(httpClient connect_go.HTTPClient, baseURL string, 
 			baseURL+WebAuthnServiceListCredentialsProcedure,
 			opts...,
 		),
+		updateCredential: connect_go.NewClient[v1alpha1.UpdateCredentialRequest, v1alpha1.UpdateCredentialResponse](
+			httpClient,
+			baseURL+WebAuthnServiceUpdateCredentialProcedure,
+			opts...,
+		),
 		deleteCredential: connect_go.NewClient[v1alpha1.DeleteCredentialRequest, v1alpha1.DeleteCredentialResponse](
 			httpClient,
 			baseURL+WebAuthnServiceDeleteCredentialProcedure,
@@ -122,6 +132,7 @@ type webAuthnServiceClient struct {
 	beginLogin         *connect_go.Client[v1alpha1.BeginLoginRequest, v1alpha1.BeginLoginResponse]
 	finishLogin        *connect_go.Client[v1alpha1.FinishLoginRequest, v1alpha1.FinishLoginResponse]
 	listCredentials    *connect_go.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
+	updateCredential   *connect_go.Client[v1alpha1.UpdateCredentialRequest, v1alpha1.UpdateCredentialResponse]
 	deleteCredential   *connect_go.Client[v1alpha1.DeleteCredentialRequest, v1alpha1.DeleteCredentialResponse]
 }
 
@@ -150,6 +161,11 @@ func (c *webAuthnServiceClient) ListCredentials(ctx context.Context, req *connec
 	return c.listCredentials.CallUnary(ctx, req)
 }
 
+// UpdateCredential calls dashboard.v1alpha1.WebAuthnService.UpdateCredential.
+func (c *webAuthnServiceClient) UpdateCredential(ctx context.Context, req *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error) {
+	return c.updateCredential.CallUnary(ctx, req)
+}
+
 // DeleteCredential calls dashboard.v1alpha1.WebAuthnService.DeleteCredential.
 func (c *webAuthnServiceClient) DeleteCredential(ctx context.Context, req *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error) {
 	return c.deleteCredential.CallUnary(ctx, req)
@@ -167,6 +183,8 @@ type WebAuthnServiceHandler interface {
 	FinishLogin(context.Context, *connect_go.Request[v1alpha1.FinishLoginRequest]) (*connect_go.Response[v1alpha1.FinishLoginResponse], error)
 	// ListCredentials
 	ListCredentials(context.Context, *connect_go.Request[v1alpha1.ListCredentialsRequest]) (*connect_go.Response[v1alpha1.ListCredentialsResponse], error)
+	// UpdateCredential
+	UpdateCredential(context.Context, *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error)
 	// DeleteCredential
 	DeleteCredential(context.Context, *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error)
 }
@@ -203,6 +221,11 @@ func NewWebAuthnServiceHandler(svc WebAuthnServiceHandler, opts ...connect_go.Ha
 		svc.ListCredentials,
 		opts...,
 	))
+	mux.Handle(WebAuthnServiceUpdateCredentialProcedure, connect_go.NewUnaryHandler(
+		WebAuthnServiceUpdateCredentialProcedure,
+		svc.UpdateCredential,
+		opts...,
+	))
 	mux.Handle(WebAuthnServiceDeleteCredentialProcedure, connect_go.NewUnaryHandler(
 		WebAuthnServiceDeleteCredentialProcedure,
 		svc.DeleteCredential,
@@ -232,6 +255,10 @@ func (UnimplementedWebAuthnServiceHandler) FinishLogin(context.Context, *connect
 
 func (UnimplementedWebAuthnServiceHandler) ListCredentials(context.Context, *connect_go.Request[v1alpha1.ListCredentialsRequest]) (*connect_go.Response[v1alpha1.ListCredentialsResponse], error) {
 	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("dashboard.v1alpha1.WebAuthnService.ListCredentials is not implemented"))
+}
+
+func (UnimplementedWebAuthnServiceHandler) UpdateCredential(context.Context, *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error) {
+	return nil, connect_go.NewError(connect_go.CodeUnimplemented, errors.New("dashboard.v1alpha1.WebAuthnService.UpdateCredential is not implemented"))
 }
 
 func (UnimplementedWebAuthnServiceHandler) DeleteCredential(context.Context, *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error) {

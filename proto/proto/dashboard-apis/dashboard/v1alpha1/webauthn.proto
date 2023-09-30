@@ -20,6 +20,8 @@ service WebAuthnService {
 
   // ListCredentials
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
+  // UpdateCredential
+  rpc UpdateCredential(UpdateCredentialRequest) returns (UpdateCredentialResponse);
   // DeleteCredential
   rpc DeleteCredential(DeleteCredentialRequest) returns (DeleteCredentialResponse);
 }
@@ -70,6 +72,8 @@ message ListCredentialsResponse {
 
 message Credential {
   string id = 1;
+  string display_name = 2;
+  google.protobuf.Timestamp timestamp = 3;
 }
 
 
@@ -79,5 +83,15 @@ message DeleteCredentialRequest {
 }
 
 message DeleteCredentialResponse {
+  string message = 1;
+}
+
+message UpdateCredentialRequest {
+  string user_name = 1;
+  string cred_id = 2;
+  string cred_display_name = 3;
+}
+
+message UpdateCredentialResponse {
   string message = 1;
 }

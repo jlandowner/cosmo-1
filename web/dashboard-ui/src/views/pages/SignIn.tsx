@@ -1,7 +1,7 @@
 import { Fingerprint, Person } from '@mui/icons-material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { Avatar, Button, Container, CssBaseline, Divider, InputAdornment, Stack, TextField, Typography } from '@mui/material';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { UseFormRegisterReturn, useForm } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLogin } from '../../components/LoginProvider';
@@ -108,7 +108,7 @@ const SignInContent: React.VFC = () => {
       setUsePasswordLogin(true);
     }
   }
-  // checkWebAuthnAvailable();
+  useEffect(() => { checkWebAuthnAvailable() }, []);
 
   return (
     <Stack sx={{ marginTop: 3, alignItems: 'center' }}>

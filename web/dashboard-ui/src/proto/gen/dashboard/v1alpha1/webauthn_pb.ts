@@ -412,6 +412,16 @@ export class Credential extends Message<Credential> {
    */
   id = "";
 
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
+   */
+  timestamp?: Timestamp;
+
   constructor(data?: PartialMessage<Credential>) {
     super();
     proto3.util.initPartial(data, this);
@@ -421,6 +431,8 @@ export class Credential extends Message<Credential> {
   static readonly typeName = "dashboard.v1alpha1.Credential";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "display_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "timestamp", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Credential {
@@ -517,6 +529,92 @@ export class DeleteCredentialResponse extends Message<DeleteCredentialResponse> 
 
   static equals(a: DeleteCredentialResponse | PlainMessage<DeleteCredentialResponse> | undefined, b: DeleteCredentialResponse | PlainMessage<DeleteCredentialResponse> | undefined): boolean {
     return proto3.util.equals(DeleteCredentialResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message dashboard.v1alpha1.UpdateCredentialRequest
+ */
+export class UpdateCredentialRequest extends Message<UpdateCredentialRequest> {
+  /**
+   * @generated from field: string user_name = 1;
+   */
+  userName = "";
+
+  /**
+   * @generated from field: string cred_id = 2;
+   */
+  credId = "";
+
+  /**
+   * @generated from field: string cred_display_name = 3;
+   */
+  credDisplayName = "";
+
+  constructor(data?: PartialMessage<UpdateCredentialRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "dashboard.v1alpha1.UpdateCredentialRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "user_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "cred_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "cred_display_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCredentialRequest {
+    return new UpdateCredentialRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCredentialRequest {
+    return new UpdateCredentialRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCredentialRequest {
+    return new UpdateCredentialRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCredentialRequest | PlainMessage<UpdateCredentialRequest> | undefined, b: UpdateCredentialRequest | PlainMessage<UpdateCredentialRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateCredentialRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message dashboard.v1alpha1.UpdateCredentialResponse
+ */
+export class UpdateCredentialResponse extends Message<UpdateCredentialResponse> {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message = "";
+
+  constructor(data?: PartialMessage<UpdateCredentialResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "dashboard.v1alpha1.UpdateCredentialResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateCredentialResponse {
+    return new UpdateCredentialResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateCredentialResponse {
+    return new UpdateCredentialResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateCredentialResponse {
+    return new UpdateCredentialResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateCredentialResponse | PlainMessage<UpdateCredentialResponse> | undefined, b: UpdateCredentialResponse | PlainMessage<UpdateCredentialResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateCredentialResponse, a, b);
   }
 }
 

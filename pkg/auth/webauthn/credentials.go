@@ -1,8 +1,8 @@
 package webauthn
 
 import (
-	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -56,7 +56,11 @@ func (u *User) WebAuthnDisplayName() string {
 	return u.Spec.DisplayName
 }
 func (u *User) WebAuthnCredentials() []webauthn.Credential {
-	return u.CredentialList.Creds
+	c := make([]webauthn.Credential, len(u.CredentialList.Creds))
+	for i, cred := range u.CredentialList.Creds {
+		c[i] = cred.Cred
+	}
+	return c
 }
 
 func (u *User) WebAuthnIcon() string {
@@ -64,36 +68,64 @@ func (u *User) WebAuthnIcon() string {
 }
 
 // RegisterCredential store credential to secret
-func (u *User) RegisterCredential(ctx context.Context, cred *webauthn.Credential) error {
-	l, err := NewCredentialList(ctx, u.client, u.Name)
+func (u *User) RegisterCredential(ctx context.Context, cred *Credential) error {
+	c, err := NewCredentialList(ctx, u.client, u.Name)
 	if err != nil {
 		return err
 	}
-	l.add(cred)
-	return l.save(ctx)
+	c.add(cred)
+	return c.save(ctx)
 }
 
 // RemoveCredential removes credential in secret
-func (u *User) RemoveCredential(ctx context.Context, credID []byte) error {
-	l, err := NewCredentialList(ctx, u.client, u.Name)
+func (u *User) RemoveCredential(ctx context.Context, credID string) error {
+	c, err := NewCredentialList(ctx, u.client, u.Name)
 	if err != nil {
 		return err
 	}
-	l.remove(credID)
-	return l.save(ctx)
+	ok := c.remove(credID)
+	if !ok {
+		return fmt.Errorf("credential not found")
+	}
+	return c.save(ctx)
+}
+
+// UpdateCredential updates credential in secret
+func (u *User) UpdateCredential(ctx context.Context, credID string, displayName *string) error {
+	c, err := NewCredentialList(ctx, u.client, u.Name)
+	if err != nil {
+		return err
+	}
+
+	// update display name if not nil
+	if displayName != nil {
+		for i, v := range c.Creds {
+			if credID == base64.URLEncoding.EncodeToString(v.Cred.ID) {
+				c.Creds[i].DisplayName = *displayName
+				break
+			}
+		}
+	}
+	return c.save(ctx)
 }
 
 // ListCredentials returns list of registered credential
-func (u *User) ListCredentials(ctx context.Context) ([]webauthn.Credential, error) {
+func (u *User) ListCredentials(ctx context.Context) ([]Credential, error) {
 	l, err := NewCredentialList(ctx, u.client, u.Name)
 	return l.Creds, err
 }
 
 type CredentialList struct {
-	Creds []webauthn.Credential
+	Creds []Credential
 
 	client kosmo.Client
 	sec    *corev1.Secret
+}
+
+type Credential struct {
+	DisplayName string
+	Timestamp   int64
+	Cred        webauthn.Credential
 }
 
 const (
@@ -102,17 +134,14 @@ const (
 )
 
 func NewCredentialList(ctx context.Context, c kosmo.Client, userName string) (*CredentialList, error) {
-	l := CredentialList{client: c}
+	cl := CredentialList{client: c}
 	var sec corev1.Secret
+	sec.SetName(CredentialSecretName)
+	sec.SetNamespace(cosmov1alpha1.UserNamespace(userName))
+	cosmov1alpha1.SetControllerManaged(&sec)
 
-	if err := c.Get(ctx, types.NamespacedName{Name: CredentialSecretName, Namespace: cosmov1alpha1.UserNamespace(userName)}, &sec); err != nil {
-		if errors.IsNotFound(err) {
-			// new secret if not present
-			var sec corev1.Secret
-			sec.SetName(CredentialSecretName)
-			sec.SetNamespace(cosmov1alpha1.UserNamespace(userName))
-			cosmov1alpha1.SetControllerManaged(&sec)
-		} else {
+	if err := c.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: sec.Namespace}, &sec); err != nil {
+		if !errors.IsNotFound(err) {
 			return nil, fmt.Errorf("failed to get credential store: %w", err)
 		}
 	}
@@ -122,18 +151,18 @@ func NewCredentialList(ctx context.Context, c kosmo.Client, userName string) (*C
 	if _, ok := sec.Data[CredentialListKey]; !ok {
 		sec.Data[CredentialListKey] = []byte(`{"creds": []}`)
 	}
-	l.sec = &sec
+	cl.sec = &sec
 
-	if err := json.Unmarshal(sec.Data[CredentialListKey], &l.Creds); err != nil {
+	if err := json.Unmarshal(sec.Data[CredentialListKey], &cl); err != nil {
 		return nil, fmt.Errorf("failed to load credential list: %w", err)
 	}
-	return &l, nil
+	return &cl, nil
 }
 
-func (c *CredentialList) add(cred *webauthn.Credential) {
+func (c *CredentialList) add(cred *Credential) {
 	notfound := true
 	for i, v := range c.Creds {
-		if bytes.Equal(cred.ID, v.ID) {
+		if base64.URLEncoding.EncodeToString(cred.Cred.ID) == base64.URLEncoding.EncodeToString(v.Cred.ID) {
 			c.Creds[i] = *cred
 			notfound = false
 			break
@@ -144,17 +173,18 @@ func (c *CredentialList) add(cred *webauthn.Credential) {
 	}
 }
 
-func (c *CredentialList) remove(id []byte) {
+func (c *CredentialList) remove(id string) bool {
 	for i, v := range c.Creds {
-		if bytes.Equal(id, v.ID) {
+		if id == base64.URLEncoding.EncodeToString(v.Cred.ID) {
 			c.Creds = append(c.Creds[:i], c.Creds[i+1:]...)
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (c *CredentialList) save(ctx context.Context) error {
-	raw, err := json.Marshal(c.Creds)
+	raw, err := json.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("failed to dump credential list: %w", err)
 	}

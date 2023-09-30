@@ -52,15 +52,17 @@ const useLoginModule = () => {
 
       let allowed = false;
       for (let index = 0; index < options.publicKey?.allowCredentials.length; index++) {
+        console.log(options.publicKey?.allowCredentials[index].id, credId)
         if (options.publicKey?.allowCredentials[index].id === credId) { allowed = true };
-        if (options.publicKey?.allowCredentials[index].id) {
-          opt.publicKey!.allowCredentials[index].id = base64url.decode(options.publicKey?.allowCredentials[index].id);
+        if (options.publicKey?.allowCredentials) {
+          opt.publicKey!.allowCredentials![index].id = base64url.decode(options.publicKey?.allowCredentials[index].id);
         }
       }
       if (!allowed) { throw Error('not allowed'); }
       console.log('credentialRequestOptions', opt);
 
-      const cred = await navigator.credentials.get(opt);
+      // Credential is allowed to access only id and type so use any.
+      const cred: any = await navigator.credentials.get(opt);
       if (cred === null) {
         console.log("cred is null");
         throw Error('credential is null');
@@ -86,8 +88,7 @@ const useLoginModule = () => {
     }
     catch (error) {
       setLoginUser(undefined);
-      console.log('loginWithWebAuthn error');
-      handleError(error);
+      error instanceof DOMException || handleError(error);
       throw error;
     }
   }

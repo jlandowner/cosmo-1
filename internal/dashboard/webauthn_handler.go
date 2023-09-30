@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	connect_go "github.com/bufbuild/connect-go"
 	webauthnproto "github.com/go-webauthn/webauthn/protocol"
@@ -41,12 +42,14 @@ func (s *Server) getWebAuthnSession(id []byte) (webauthn.SessionData, error) {
 	return *session, nil
 }
 
-func convertCredentialsToDashCredentials(creds []webauthn.Credential) []*dashv1alpha1.Credential {
-	var ret []*dashv1alpha1.Credential
-	for _, cred := range creds {
-		ret = append(ret, &dashv1alpha1.Credential{
-			Id: base64.URLEncoding.EncodeToString(cred.ID),
-		})
+func convertCredentialsToDashCredentials(creds []cosmowebauthn.Credential) []*dashv1alpha1.Credential {
+	ret := make([]*dashv1alpha1.Credential, len(creds))
+	for i, cred := range creds {
+		ret[i] = &dashv1alpha1.Credential{
+			Id:          base64.RawURLEncoding.EncodeToString(cred.Cred.ID),
+			DisplayName: cred.DisplayName,
+			Timestamp:   timestamppb.New(time.Unix(cred.Timestamp, 0)),
+		}
 	}
 	return ret
 }
@@ -117,7 +120,14 @@ func (s *Server) FinishRegistration(ctx context.Context, req *connect_go.Request
 	}
 	log.Info("successfully created and verified credential. saving...", "user", req.Msg.UserName)
 
-	if err := user.RegisterCredential(ctx, cred); err != nil {
+	r := requestFromContext(ctx)
+
+	c := cosmowebauthn.Credential{
+		DisplayName: r.UserAgent(),
+		Timestamp:   time.Now().Unix(),
+		Cred:        *cred,
+	}
+	if err := user.RegisterCredential(ctx, &c); err != nil {
 		return nil, ErrResponse(log, fmt.Errorf("failed to save credential: %w", err))
 	}
 	log.Info("successfully saved credential", "user", req.Msg.UserName)
@@ -218,6 +228,25 @@ func (s *Server) ListCredentials(ctx context.Context, req *connect_go.Request[da
 	}), nil
 }
 
+// UpdateCredential updates credentia
+func (s *Server) UpdateCredential(ctx context.Context, req *connect_go.Request[dashv1alpha1.UpdateCredentialRequest]) (*connect_go.Response[dashv1alpha1.UpdateCredentialResponse], error) {
+
+	log := clog.FromContext(ctx).WithCaller()
+
+	user, err := cosmowebauthn.GetUser(ctx, s.Klient, req.Msg.UserName)
+	if err != nil {
+		return nil, ErrResponse(log, err)
+	}
+
+	if err := user.UpdateCredential(ctx, req.Msg.CredId, &req.Msg.CredDisplayName); err != nil {
+		return nil, ErrResponse(log, err)
+	}
+
+	return connect_go.NewResponse(&dashv1alpha1.UpdateCredentialResponse{
+		Message: "Successfully updated credential",
+	}), nil
+}
+
 // DeleteCredential remove credential of a user by given id
 func (s *Server) DeleteCredential(ctx context.Context, req *connect_go.Request[dashv1alpha1.DeleteCredentialRequest]) (*connect_go.Response[dashv1alpha1.DeleteCredentialResponse], error) {
 
@@ -228,7 +257,7 @@ func (s *Server) DeleteCredential(ctx context.Context, req *connect_go.Request[d
 		return nil, ErrResponse(log, err)
 	}
 
-	if err := user.RemoveCredential(ctx, []byte(req.Msg.CredId)); err != nil {
+	if err := user.RemoveCredential(ctx, req.Msg.CredId); err != nil {
 		return nil, ErrResponse(log, err)
 	}
 

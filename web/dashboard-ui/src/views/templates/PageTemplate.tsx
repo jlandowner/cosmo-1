@@ -169,7 +169,7 @@ export const PageTemplate: React.FC<React.PropsWithChildren<PageTemplateProps>> 
               <Divider sx={{ mb: 1 }} />
               {isSignIn && <MenuItem onClick={() => manageAuthenticators()}>
                 <ListItemIcon><FingerprintTwoTone fontSize="small" /></ListItemIcon>
-                <ListItemText>Manage Authenticators...</ListItemText>
+                <ListItemText>Manage WebAuthn Credentials...</ListItemText>
               </MenuItem>}
               {isSignIn && canChangePassword && <MenuItem onClick={() => changePassword()}>
                 <ListItemIcon><VpnKey fontSize="small" /></ListItemIcon>

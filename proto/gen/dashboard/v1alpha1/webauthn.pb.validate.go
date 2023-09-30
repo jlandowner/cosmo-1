@@ -1166,6 +1166,37 @@ func (m *Credential) validate(all bool) error {
 
 	// no validation rules for Id
 
+	// no validation rules for DisplayName
+
+	if all {
+		switch v := interface{}(m.GetTimestamp()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, CredentialValidationError{
+					field:  "Timestamp",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, CredentialValidationError{
+					field:  "Timestamp",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetTimestamp()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return CredentialValidationError{
+				field:  "Timestamp",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
 	if len(errors) > 0 {
 		return CredentialMultiError(errors)
 	}
@@ -1452,3 +1483,215 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = DeleteCredentialResponseValidationError{}
+
+// Validate checks the field values on UpdateCredentialRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *UpdateCredentialRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on UpdateCredentialRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// UpdateCredentialRequestMultiError, or nil if none found.
+func (m *UpdateCredentialRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *UpdateCredentialRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for UserName
+
+	// no validation rules for CredId
+
+	// no validation rules for CredDisplayName
+
+	if len(errors) > 0 {
+		return UpdateCredentialRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// UpdateCredentialRequestMultiError is an error wrapping multiple validation
+// errors returned by UpdateCredentialRequest.ValidateAll() if the designated
+// constraints aren't met.
+type UpdateCredentialRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m UpdateCredentialRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m UpdateCredentialRequestMultiError) AllErrors() []error { return m }
+
+// UpdateCredentialRequestValidationError is the validation error returned by
+// UpdateCredentialRequest.Validate if the designated constraints aren't met.
+type UpdateCredentialRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e UpdateCredentialRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e UpdateCredentialRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e UpdateCredentialRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e UpdateCredentialRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e UpdateCredentialRequestValidationError) ErrorName() string {
+	return "UpdateCredentialRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e UpdateCredentialRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sUpdateCredentialRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = UpdateCredentialRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = UpdateCredentialRequestValidationError{}
+
+// Validate checks the field values on UpdateCredentialResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *UpdateCredentialResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on UpdateCredentialResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// UpdateCredentialResponseMultiError, or nil if none found.
+func (m *UpdateCredentialResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *UpdateCredentialResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Message
+
+	if len(errors) > 0 {
+		return UpdateCredentialResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// UpdateCredentialResponseMultiError is an error wrapping multiple validation
+// errors returned by UpdateCredentialResponse.ValidateAll() if the designated
+// constraints aren't met.
+type UpdateCredentialResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m UpdateCredentialResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m UpdateCredentialResponseMultiError) AllErrors() []error { return m }
+
+// UpdateCredentialResponseValidationError is the validation error returned by
+// UpdateCredentialResponse.Validate if the designated constraints aren't met.
+type UpdateCredentialResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e UpdateCredentialResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e UpdateCredentialResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e UpdateCredentialResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e UpdateCredentialResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e UpdateCredentialResponseValidationError) ErrorName() string {
+	return "UpdateCredentialResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e UpdateCredentialResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sUpdateCredentialResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = UpdateCredentialResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = UpdateCredentialResponseValidationError{}

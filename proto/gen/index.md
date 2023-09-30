@@ -60,6 +60,8 @@
     - [FinishRegistrationResponse](#dashboard-v1alpha1-FinishRegistrationResponse)
     - [ListCredentialsRequest](#dashboard-v1alpha1-ListCredentialsRequest)
     - [ListCredentialsResponse](#dashboard-v1alpha1-ListCredentialsResponse)
+    - [UpdateCredentialRequest](#dashboard-v1alpha1-UpdateCredentialRequest)
+    - [UpdateCredentialResponse](#dashboard-v1alpha1-UpdateCredentialResponse)
   
     - [WebAuthnService](#dashboard-v1alpha1-WebAuthnService)
   
@@ -731,6 +733,8 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
+| display_name | [string](#string) |  |  |
+| timestamp | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  |  |
 
 
 
@@ -861,6 +865,38 @@
 
 
 
+
+<a name="dashboard-v1alpha1-UpdateCredentialRequest"></a>
+
+### UpdateCredentialRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| user_name | [string](#string) |  |  |
+| cred_id | [string](#string) |  |  |
+| cred_display_name | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="dashboard-v1alpha1-UpdateCredentialResponse"></a>
+
+### UpdateCredentialResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| message | [string](#string) |  |  |
+
+
+
+
+
  
 
  
@@ -880,6 +916,7 @@
 | BeginLogin | [BeginLoginRequest](#dashboard-v1alpha1-BeginLoginRequest) | [BeginLoginResponse](#dashboard-v1alpha1-BeginLoginResponse) | BeginLogin |
 | FinishLogin | [FinishLoginRequest](#dashboard-v1alpha1-FinishLoginRequest) | [FinishLoginResponse](#dashboard-v1alpha1-FinishLoginResponse) | FinishLogin |
 | ListCredentials | [ListCredentialsRequest](#dashboard-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#dashboard-v1alpha1-ListCredentialsResponse) | ListCredentials |
+| UpdateCredential | [UpdateCredentialRequest](#dashboard-v1alpha1-UpdateCredentialRequest) | [UpdateCredentialResponse](#dashboard-v1alpha1-UpdateCredentialResponse) | UpdateCredential |
 | DeleteCredential | [DeleteCredentialRequest](#dashboard-v1alpha1-DeleteCredentialRequest) | [DeleteCredentialResponse](#dashboard-v1alpha1-DeleteCredentialResponse) | DeleteCredential |
 
  

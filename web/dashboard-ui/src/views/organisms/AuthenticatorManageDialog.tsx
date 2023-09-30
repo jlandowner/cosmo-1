@@ -1,19 +1,23 @@
+import { Delete } from "@mui/icons-material";
 import {
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Grid,
+  IconButton,
   Stack,
   Typography
 } from "@mui/material";
+import Box from '@mui/material/Box';
 import { useSnackbar } from 'notistack';
 import { useEffect, useState } from "react";
 import { base64url } from '../../components/Base64';
 import { DialogContext } from "../../components/ContextProvider";
 import { User } from "../../proto/gen/dashboard/v1alpha1/user_pb";
+import { Credential } from "../../proto/gen/dashboard/v1alpha1/webauthn_pb";
 import { useWebAuthnService } from '../../services/DashboardServices';
-
 /**
  * view
  */
@@ -23,7 +27,22 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
   const webauthnService = useWebAuthnService();
   const { enqueueSnackbar } = useSnackbar();
 
-  const [credentials, setCredentials] = useState<string[]>([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+
+  const registerdCredId = localStorage.getItem(`credId`)
+  const isRegistered = Boolean(registerdCredId && credentials.map(c => c.id).includes(registerdCredId!));
+
+  const [isWebAuthnAvailable, setIsWebAuthnAvailable] = useState(false);
+
+  const checkWebAuthnAvailable = () => {
+    if (window.PublicKeyCredential) {
+      PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+        .then(uvpaa => { setIsWebAuthnAvailable(uvpaa) });
+    }
+  }
+  useEffect(() => { checkWebAuthnAvailable() }, []);
+
+  console.log("credId", registerdCredId, "isRegistered", isRegistered, "isWebAuthnAvailable", isWebAuthnAvailable);
 
   /**
    * listCredentials
@@ -32,7 +51,8 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
     console.log("listCredentials");
     try {
       const resp = await webauthnService.listCredentials({ userName: user.name });
-      setCredentials(resp.credentials.map(cred => cred.id));
+      setCredentials(resp.credentials);
+      console.log(resp.credentials);
     }
     catch (error) {
       handleError(error);
@@ -57,12 +77,12 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
       }
       console.log("opt", opt);
 
-      const cred = await navigator.credentials.create(opt);
+      // Credential is allowed to access only id and type so use any.
+      const cred: any = await navigator.credentials.create(opt);
       if (cred === null) {
         console.log("cred is null");
         throw Error('credential is null');
       }
-      localStorage.setItem(`credId`, cred.id);
 
       const credential = {
         id: cred.id,
@@ -74,10 +94,30 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
         }
       };
       console.log("credential", credential);
+      localStorage.setItem(`credId`, credential.rawId);
 
       const finResp = await webauthnService.finishRegistration({ userName: user.name, credentialCreationResponse: JSON.stringify(credential) });
       enqueueSnackbar(finResp.message, { variant: 'success' });
       listCredentials();
+    }
+    catch (error) {
+      handleError(error);
+    }
+  }
+
+  /**
+   * removeCredentials
+  */
+  const removeCredentials = async (id: string) => {
+    console.log("removeCredentials");
+    if (!confirm("remove?")) { return }
+    try {
+      const resp = await webauthnService.deleteCredential({ userName: user.name, credId: id });
+      enqueueSnackbar(resp.message, { variant: 'success' });
+      listCredentials();
+      if (id === registerdCredId) {
+        localStorage.removeItem(`credId`);
+      }
     }
     catch (error) {
       handleError(error);
@@ -90,25 +130,63 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
   const handleError = (error: any) => {
     console.log(error);
     const msg = error?.message;
-    msg && enqueueSnackbar(msg, { variant: 'error' });
+    error instanceof DOMException || msg && enqueueSnackbar(msg, { variant: 'error' });
   }
 
   return (
     <Dialog open={true}
       fullWidth maxWidth={'sm'}>
-      <DialogTitle>Authenticators</DialogTitle>
+      <DialogTitle>WebAuthn Credentials</DialogTitle>
       <DialogContent>
-        <Stack spacing={3}>
-          {credentials.map((field, index) =>
-            <Typography key={index}>{field}</Typography>
-          )}
-        </Stack>
+        <Box sx={{ p: 2, border: '1px grey', borderRadius: '4px' }}>
+          <Stack alignItems="center" >
+            {credentials.length === 0 && <Typography>No credentials</Typography>}
+            {credentials.length > 0 && <Grid container sx={{ p: 2 }}>
+              {credentials.map((field, index) => {
+                return (
+                  <>
+                    <Grid item xs={11} sx={{ m: 'auto' }} key={index}>
+                      <Typography sx={registerdCredId === field.id && {
+                        color: 'red',
+                      } || undefined}>{field.id}</Typography>
+                      <Typography variant="caption" display="block">{field.displayName}</Typography>
+                    </Grid>
+                    <Grid item xs={1} sx={{ m: 'auto', textAlign: 'end' }}>
+                      <IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>
+                    </Grid>
+                  </>
+                )
+              })}
+            </Grid>}
+          </Stack>
+          {/* <List>
+            {credentials.map((field, index) =>
+              <div key={index}>
+                <ListItem
+                  secondaryAction={<IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>}
+                >
+                  <ListItemText
+                    primary={field.id}
+                    primaryTypographyProps={registerdCredId === field.id && {
+                      color: 'red',
+                    } || undefined}
+
+                    secondary={<Typography variant="caption" display="block">{field.displayName}</Typography>}
+                  />
+                </ListItem>
+                <Divider />
+              </div>
+            )}
+          </List> */}
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => onClose()} color="primary">Close</Button>
-        <Button onClick={() => registerNewAuthenticator()} variant="contained" color="secondary">Register</Button>
+        {!isRegistered && isWebAuthnAvailable
+          ? <Button onClick={() => registerNewAuthenticator()} variant="contained" color="secondary">Register</Button>
+          : undefined}
       </DialogActions>
-    </Dialog>
+    </Dialog >
   );
 };
 

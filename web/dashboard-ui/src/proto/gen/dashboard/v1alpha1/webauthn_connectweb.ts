@@ -6,7 +6,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { BeginLoginRequest, BeginLoginResponse, BeginRegistrationRequest, BeginRegistrationResponse, DeleteCredentialRequest, DeleteCredentialResponse, FinishLoginRequest, FinishLoginResponse, FinishRegistrationRequest, FinishRegistrationResponse, ListCredentialsRequest, ListCredentialsResponse } from "./webauthn_pb.js";
+import { BeginLoginRequest, BeginLoginResponse, BeginRegistrationRequest, BeginRegistrationResponse, DeleteCredentialRequest, DeleteCredentialResponse, FinishLoginRequest, FinishLoginResponse, FinishRegistrationRequest, FinishRegistrationResponse, ListCredentialsRequest, ListCredentialsResponse, UpdateCredentialRequest, UpdateCredentialResponse } from "./webauthn_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -68,6 +68,17 @@ export const WebAuthnService = {
       name: "ListCredentials",
       I: ListCredentialsRequest,
       O: ListCredentialsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * UpdateCredential
+     *
+     * @generated from rpc dashboard.v1alpha1.WebAuthnService.UpdateCredential
+     */
+    updateCredential: {
+      name: "UpdateCredential",
+      I: UpdateCredentialRequest,
+      O: UpdateCredentialResponse,
       kind: MethodKind.Unary,
     },
     /**
