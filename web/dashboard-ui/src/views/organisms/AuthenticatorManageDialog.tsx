@@ -161,8 +161,8 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
             ? <Typography>No credentials</Typography>
             : <Grid container sx={{ p: 1 }}>
               <Grid item xs={0} sm={0.5} ></Grid>
-              <Grid item xs={2} sm={1.5} sx={{ textAlign: 'end' }}> <Typography variant="caption" display="block">Created</Typography></Grid>
-              <Grid item xs={9} ><Typography variant="caption" display="block" sx={{ pl: 2 }}>Credential ID & Name</Typography></Grid>
+              <Grid item xs={3} sm={1.5} sx={{ textAlign: 'end' }}> <Typography variant="caption" display="block">Created</Typography></Grid>
+              <Grid item xs={8} sm={9} ><Typography variant="caption" display="block" sx={{ pl: 2 }}>Credential ID & Name</Typography></Grid>
               <Grid item xs={1} ></Grid>
               <Grid item xs={12} ><Divider /></Grid>
               {credentials.map((field, index) => {
@@ -175,11 +175,11 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
                         </Tooltip>
                         || undefined}
                     </Grid>}
-                    <Grid item xs={2} sm={1.5} sx={{ m: 'auto', textAlign: 'end' }}>
+                    <Grid item xs={3} sm={1.5} sx={{ m: 'auto', textAlign: 'end' }}>
                       <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleDateString()}</Typography>
                       <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleTimeString()}</Typography>
                     </Grid>
-                    <Grid item xs={9} sx={{ m: 'auto', p: 2 }}>
+                    <Grid item xs={8} sm={9} sx={{ m: 'auto', p: 2 }}>
                       <EllipsisTypography placement='top'>{field.id}</EllipsisTypography>
                       <EditableTypography onSave={(input) => { updateCredentialName(field.id, input) }}>{field.displayName}</EditableTypography>
                     </Grid >
