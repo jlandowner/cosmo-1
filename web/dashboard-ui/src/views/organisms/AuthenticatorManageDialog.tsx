@@ -33,10 +33,6 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
 
   const [credentials, setCredentials] = useState<Credential[]>([]);
 
-  // const editing: string[] = credentials.map((v) => v.displayName)
-
-  const [editing, setEditing] = useState<string[]>(credentials.map((v) => v.displayName));
-
   const registerdCredId = localStorage.getItem(`credId`)
   const isRegistered = Boolean(registerdCredId && credentials.map(c => c.id).includes(registerdCredId!));
 
@@ -60,8 +56,6 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
     try {
       const resp = await webauthnService.listCredentials({ userName: user.name });
       setCredentials(resp.credentials);
-      setEditing(resp.credentials.map((v) => v.displayName));
-      console.log(resp.credentials);
     }
     catch (error) {
       handleError(error);
@@ -84,7 +78,6 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
       if (options.publicKey?.challenge) {
         opt.publicKey!.challenge = base64url.decode(options.publicKey?.challenge);
       }
-      console.log("opt", opt);
 
       // Credential is allowed to access only id and type so use any.
       const cred: any = await navigator.credentials.create(opt);
@@ -102,7 +95,6 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
           attestationObject: base64url.encode(cred.response.attestationObject)
         }
       };
-      console.log("credential", credential);
       localStorage.setItem(`credId`, credential.rawId);
 
       const finResp = await webauthnService.finishRegistration({ userName: user.name, credentialCreationResponse: JSON.stringify(credential) });
@@ -137,7 +129,6 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
    * updateCredentialName
   */
   const updateCredentialName = async (id: string, name: string) => {
-    console.log("updateCredentialName", "newName=" + name);
     try {
       const resp = await webauthnService.updateCredential({ userName: user.name, credId: id, credDisplayName: name });
       enqueueSnackbar(resp.message, { variant: 'success' });

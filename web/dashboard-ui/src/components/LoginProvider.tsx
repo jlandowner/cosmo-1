@@ -44,7 +44,6 @@ const useLoginModule = () => {
       const options = JSON.parse(beginResp.credentialRequestOptions);
 
       const opt: CredentialRequestOptions = JSON.parse(JSON.stringify(options));
-      console.log('credentialRequestOptions', opt);
 
       if (options.publicKey?.challenge) {
         opt.publicKey!.challenge = base64url.decode(options.publicKey?.challenge);
@@ -52,14 +51,12 @@ const useLoginModule = () => {
 
       let allowed = false;
       for (let index = 0; index < options.publicKey?.allowCredentials.length; index++) {
-        console.log(options.publicKey?.allowCredentials[index].id, credId)
         if (options.publicKey?.allowCredentials[index].id === credId) { allowed = true };
         if (options.publicKey?.allowCredentials) {
           opt.publicKey!.allowCredentials![index].id = base64url.decode(options.publicKey?.allowCredentials[index].id);
         }
       }
       if (!allowed) { throw Error('invalid credentials'); }
-      console.log('credentialRequestOptions', opt);
 
       // Credential is allowed to access only id and type so use any.
       const cred: any = await navigator.credentials.get(opt);
@@ -67,7 +64,6 @@ const useLoginModule = () => {
         console.log("cred is null");
         throw Error('credential is null');
       }
-      console.log('cred', cred);
 
       const credential = {
         id: cred.id,
