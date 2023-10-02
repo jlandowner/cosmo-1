@@ -157,38 +157,39 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
       <DialogTitle>WebAuthn Credentials</DialogTitle>
       <DialogContent>
         <Box alignItems="center">
-          {credentials.length === 0 && <Typography>No credentials</Typography>}
-          {credentials.length > 0 && <Grid container sx={{ p: 1 }}>
-            <Grid item xs={0} sm={0.5} ></Grid>
-            <Grid item xs={2} sm={1.5} sx={{ textAlign: 'end' }}> <Typography variant="caption" display="block">Created</Typography></Grid>
-            <Grid item xs={9} ><Typography variant="caption" display="block" sx={{ pl: 2 }}>Credential ID & Name</Typography></Grid>
-            <Grid item xs={1} ></Grid>
-            <Grid item xs={12} ><Divider /></Grid>
-            {credentials.map((field, index) => {
-              return (
-                <>
-                  {sm && <Grid item xs={0} sm={0.5} zeroMinWidth sx={{ m: 'auto', textAlign: 'center' }}>
-                    {registerdCredId === field.id &&
-                      <Tooltip title="This credential is created in your device" placement="top-end">
-                        <VerifiedOutlined color="success" fontSize="small" />
-                      </Tooltip>
-                      || undefined}
-                  </Grid>}
-                  <Grid item xs={2} sm={1.5} sx={{ m: 'auto', textAlign: 'end' }}>
-                    <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleDateString()}</Typography>
-                    <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleTimeString()}</Typography>
-                  </Grid>
-                  <Grid item xs={9} sx={{ m: 'auto', p: 2 }} key={index}>
-                    <EllipsisTypography placement='top'>{field.id}</EllipsisTypography>
-                    <EditableTypography onSave={(input) => { updateCredentialName(field.id, input) }}>{field.displayName}</EditableTypography>
-                  </Grid >
-                  < Grid item xs={1} sx={{ m: 'auto', textAlign: 'center' }}>
-                    <IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>
-                  </Grid>
-                </>
-              )
-            })}
-          </Grid>}
+          {credentials.length === 0
+            ? <Typography>No credentials</Typography>
+            : <Grid container sx={{ p: 1 }}>
+              <Grid item xs={0} sm={0.5} ></Grid>
+              <Grid item xs={2} sm={1.5} sx={{ textAlign: 'end' }}> <Typography variant="caption" display="block">Created</Typography></Grid>
+              <Grid item xs={9} ><Typography variant="caption" display="block" sx={{ pl: 2 }}>Credential ID & Name</Typography></Grid>
+              <Grid item xs={1} ></Grid>
+              <Grid item xs={12} ><Divider /></Grid>
+              {credentials.map((field, index) => {
+                return (
+                  <>
+                    {sm && <Grid item xs={0} sm={0.5} zeroMinWidth sx={{ m: 'auto', textAlign: 'center' }}>
+                      {registerdCredId === field.id &&
+                        <Tooltip title="This credential is created in your device" placement="top-end">
+                          <VerifiedOutlined color="success" fontSize="small" />
+                        </Tooltip>
+                        || undefined}
+                    </Grid>}
+                    <Grid item xs={2} sm={1.5} sx={{ m: 'auto', textAlign: 'end' }}>
+                      <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleDateString()}</Typography>
+                      <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleTimeString()}</Typography>
+                    </Grid>
+                    <Grid item xs={9} sx={{ m: 'auto', p: 2 }}>
+                      <EllipsisTypography placement='top'>{field.id}</EllipsisTypography>
+                      <EditableTypography onSave={(input) => { updateCredentialName(field.id, input) }}>{field.displayName}</EditableTypography>
+                    </Grid >
+                    < Grid item xs={1} sx={{ m: 'auto', textAlign: 'center' }}>
+                      <IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>
+                    </Grid>
+                  </>
+                )
+              })}
+            </Grid>}
         </Box>
       </DialogContent >
       <DialogActions>
