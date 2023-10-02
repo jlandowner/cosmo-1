@@ -1,14 +1,16 @@
-import { Delete } from "@mui/icons-material";
+import { Delete, VerifiedOutlined } from "@mui/icons-material";
 import {
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   Grid,
   IconButton,
-  Stack,
-  Typography
+  Tooltip,
+  Typography,
+  useMediaQuery, useTheme
 } from "@mui/material";
 import Box from '@mui/material/Box';
 import { useSnackbar } from 'notistack';
@@ -18,6 +20,8 @@ import { DialogContext } from "../../components/ContextProvider";
 import { User } from "../../proto/gen/dashboard/v1alpha1/user_pb";
 import { Credential } from "../../proto/gen/dashboard/v1alpha1/webauthn_pb";
 import { useWebAuthnService } from '../../services/DashboardServices';
+import { EditableTypography } from "../atoms/EditableTypography";
+import { EllipsisTypography } from "../atoms/EllipsisTypography";
 /**
  * view
  */
@@ -28,6 +32,10 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
   const { enqueueSnackbar } = useSnackbar();
 
   const [credentials, setCredentials] = useState<Credential[]>([]);
+
+  // const editing: string[] = credentials.map((v) => v.displayName)
+
+  const [editing, setEditing] = useState<string[]>(credentials.map((v) => v.displayName));
 
   const registerdCredId = localStorage.getItem(`credId`)
   const isRegistered = Boolean(registerdCredId && credentials.map(c => c.id).includes(registerdCredId!));
@@ -52,6 +60,7 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
     try {
       const resp = await webauthnService.listCredentials({ userName: user.name });
       setCredentials(resp.credentials);
+      setEditing(resp.credentials.map((v) => v.displayName));
       console.log(resp.credentials);
     }
     catch (error) {
@@ -110,7 +119,7 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
   */
   const removeCredentials = async (id: string) => {
     console.log("removeCredentials");
-    if (!confirm("remove?")) { return }
+    if (!confirm("Are you sure to REMOVE?\nID: " + id)) { return }
     try {
       const resp = await webauthnService.deleteCredential({ userName: user.name, credId: id });
       enqueueSnackbar(resp.message, { variant: 'success' });
@@ -118,6 +127,21 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
       if (id === registerdCredId) {
         localStorage.removeItem(`credId`);
       }
+    }
+    catch (error) {
+      handleError(error);
+    }
+  }
+
+  /**
+   * updateCredentialName
+  */
+  const updateCredentialName = async (id: string, name: string) => {
+    console.log("updateCredentialName", "newName=" + name);
+    try {
+      const resp = await webauthnService.updateCredential({ userName: user.name, credId: id, credDisplayName: name });
+      enqueueSnackbar(resp.message, { variant: 'success' });
+      listCredentials();
     }
     catch (error) {
       handleError(error);
@@ -133,53 +157,49 @@ export const AuthenticatorManageDialog: React.VFC<{ onClose: () => void, user: U
     error instanceof DOMException || msg && enqueueSnackbar(msg, { variant: 'error' });
   }
 
+  const theme = useTheme();
+  const sm = useMediaQuery(theme.breakpoints.up('sm'), { noSsr: true });
+
   return (
     <Dialog open={true}
       fullWidth maxWidth={'sm'}>
       <DialogTitle>WebAuthn Credentials</DialogTitle>
       <DialogContent>
-        <Box sx={{ p: 2, border: '1px grey', borderRadius: '4px' }}>
-          <Stack alignItems="center" >
-            {credentials.length === 0 && <Typography>No credentials</Typography>}
-            {credentials.length > 0 && <Grid container sx={{ p: 2 }}>
-              {credentials.map((field, index) => {
-                return (
-                  <>
-                    <Grid item xs={11} sx={{ m: 'auto' }} key={index}>
-                      <Typography sx={registerdCredId === field.id && {
-                        color: 'red',
-                      } || undefined}>{field.id}</Typography>
-                      <Typography variant="caption" display="block">{field.displayName}</Typography>
-                    </Grid>
-                    <Grid item xs={1} sx={{ m: 'auto', textAlign: 'end' }}>
-                      <IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>
-                    </Grid>
-                  </>
-                )
-              })}
-            </Grid>}
-          </Stack>
-          {/* <List>
-            {credentials.map((field, index) =>
-              <div key={index}>
-                <ListItem
-                  secondaryAction={<IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>}
-                >
-                  <ListItemText
-                    primary={field.id}
-                    primaryTypographyProps={registerdCredId === field.id && {
-                      color: 'red',
-                    } || undefined}
-
-                    secondary={<Typography variant="caption" display="block">{field.displayName}</Typography>}
-                  />
-                </ListItem>
-                <Divider />
-              </div>
-            )}
-          </List> */}
+        <Box alignItems="center">
+          {credentials.length === 0 && <Typography>No credentials</Typography>}
+          {credentials.length > 0 && <Grid container sx={{ p: 1 }}>
+            <Grid item xs={0} sm={0.5} ></Grid>
+            <Grid item xs={2} sm={1.5} sx={{ textAlign: 'end' }}> <Typography variant="caption" display="block">Created</Typography></Grid>
+            <Grid item xs={9} ><Typography variant="caption" display="block" sx={{ pl: 2 }}>Credential ID & Name</Typography></Grid>
+            <Grid item xs={1} ></Grid>
+            <Grid item xs={12} ><Divider /></Grid>
+            {credentials.map((field, index) => {
+              return (
+                <>
+                  {sm && <Grid item xs={0} sm={0.5} zeroMinWidth sx={{ m: 'auto', textAlign: 'center' }}>
+                    {registerdCredId === field.id &&
+                      <Tooltip title="This credential is created in your device" placement="top-end">
+                        <VerifiedOutlined color="success" fontSize="small" />
+                      </Tooltip>
+                      || undefined}
+                  </Grid>}
+                  <Grid item xs={2} sm={1.5} sx={{ m: 'auto', textAlign: 'end' }}>
+                    <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleDateString()}</Typography>
+                    <Typography variant="caption" display="block">{field.timestamp?.toDate().toLocaleTimeString()}</Typography>
+                  </Grid>
+                  <Grid item xs={9} sx={{ m: 'auto', p: 2 }} key={index}>
+                    <EllipsisTypography placement='top'>{field.id}</EllipsisTypography>
+                    <EditableTypography onSave={(input) => { updateCredentialName(field.id, input) }}>{field.displayName}</EditableTypography>
+                  </Grid >
+                  < Grid item xs={1} sx={{ m: 'auto', textAlign: 'center' }}>
+                    <IconButton edge="end" aria-label="delete" onClick={() => { removeCredentials(field.id) }}><Delete /></IconButton>
+                  </Grid>
+                </>
+              )
+            })}
+          </Grid>}
         </Box>
-      </DialogContent>
+      </DialogContent >
       <DialogActions>
         <Button onClick={() => onClose()} color="primary">Close</Button>
         {!isRegistered && isWebAuthnAvailable
