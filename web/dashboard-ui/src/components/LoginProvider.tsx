@@ -58,7 +58,7 @@ const useLoginModule = () => {
           opt.publicKey!.allowCredentials![index].id = base64url.decode(options.publicKey?.allowCredentials[index].id);
         }
       }
-      if (!allowed) { throw Error('not allowed'); }
+      if (!allowed) { throw Error('invalid credentials'); }
       console.log('credentialRequestOptions', opt);
 
       // Credential is allowed to access only id and type so use any.

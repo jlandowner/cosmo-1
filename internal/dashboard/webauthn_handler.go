@@ -133,7 +133,7 @@ func (s *Server) FinishRegistration(ctx context.Context, req *connect_go.Request
 	log.Info("successfully saved credential", "user", req.Msg.UserName)
 
 	return connect_go.NewResponse(&dashv1alpha1.FinishRegistrationResponse{
-		Message: "Registration Success",
+		Message: "Successfully registered new credential",
 	}), nil
 }
 
