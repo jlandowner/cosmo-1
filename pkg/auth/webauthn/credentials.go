@@ -100,7 +100,7 @@ func (u *User) UpdateCredential(ctx context.Context, credID string, displayName 
 	// update display name if not nil
 	if displayName != nil {
 		for i, v := range c.Creds {
-			if credID == base64.URLEncoding.EncodeToString(v.Cred.ID) {
+			if credID == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
 				c.Creds[i].DisplayName = *displayName
 				break
 			}
@@ -162,7 +162,7 @@ func NewCredentialList(ctx context.Context, c kosmo.Client, userName string) (*C
 func (c *CredentialList) add(cred *Credential) {
 	notfound := true
 	for i, v := range c.Creds {
-		if base64.URLEncoding.EncodeToString(cred.Cred.ID) == base64.URLEncoding.EncodeToString(v.Cred.ID) {
+		if base64.RawURLEncoding.EncodeToString(cred.Cred.ID) == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
 			c.Creds[i] = *cred
 			notfound = false
 			break
@@ -175,7 +175,7 @@ func (c *CredentialList) add(cred *Credential) {
 
 func (c *CredentialList) remove(id string) bool {
 	for i, v := range c.Creds {
-		if id == base64.URLEncoding.EncodeToString(v.Cred.ID) {
+		if id == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
 			c.Creds = append(c.Creds[:i], c.Creds[i+1:]...)
 			return true
 		}
