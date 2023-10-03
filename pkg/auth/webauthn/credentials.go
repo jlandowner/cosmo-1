@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/argon2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
@@ -42,7 +44,7 @@ type User struct {
 
 func (u *User) WebAuthnID() []byte {
 	id := make([]byte, 64)
-	hashed := argon2.IDKey([]byte("tom"), nil, 1, 2048, 4, 32)
+	hashed := argon2.IDKey([]byte(u.Name), nil, 1, 2048, 4, 32)
 	n := hex.Encode(id, hashed)
 	if n != 64 {
 		panic(fmt.Errorf("invalid hash length: n=%d", n))
@@ -69,21 +71,25 @@ func (u *User) WebAuthnIcon() string {
 
 // RegisterCredential store credential to secret
 func (u *User) RegisterCredential(ctx context.Context, cred *Credential) error {
+	cred.Default(time.Now())
 	c, err := NewCredentialList(ctx, u.client, u.Name)
 	if err != nil {
 		return err
 	}
-	c.add(cred)
+	err = c.add(cred)
+	if err != nil {
+		return err
+	}
 	return c.save(ctx)
 }
 
 // RemoveCredential removes credential in secret
-func (u *User) RemoveCredential(ctx context.Context, credID string) error {
+func (u *User) RemoveCredential(ctx context.Context, base64urlEncodedCredId string) error {
 	c, err := NewCredentialList(ctx, u.client, u.Name)
 	if err != nil {
 		return err
 	}
-	ok := c.remove(credID)
+	ok := c.remove(base64urlEncodedCredId)
 	if !ok {
 		return fmt.Errorf("credential not found")
 	}
@@ -91,7 +97,7 @@ func (u *User) RemoveCredential(ctx context.Context, credID string) error {
 }
 
 // UpdateCredential updates credential in secret
-func (u *User) UpdateCredential(ctx context.Context, credID string, displayName *string) error {
+func (u *User) UpdateCredential(ctx context.Context, base64urlEncodedCredId string, displayName *string) error {
 	c, err := NewCredentialList(ctx, u.client, u.Name)
 	if err != nil {
 		return err
@@ -100,7 +106,7 @@ func (u *User) UpdateCredential(ctx context.Context, credID string, displayName 
 	// update display name if not nil
 	if displayName != nil {
 		for i, v := range c.Creds {
-			if credID == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
+			if base64urlEncodedCredId == v.Base64URLEncodedId {
 				c.Creds[i].DisplayName = *displayName
 				break
 			}
@@ -109,10 +115,13 @@ func (u *User) UpdateCredential(ctx context.Context, credID string, displayName 
 	return c.save(ctx)
 }
 
-// ListCredentials returns list of registered credential
+// ListCredentials returns list of registered credentials
 func (u *User) ListCredentials(ctx context.Context) ([]Credential, error) {
 	l, err := NewCredentialList(ctx, u.client, u.Name)
-	return l.Creds, err
+	if l == nil || err != nil {
+		return nil, err
+	}
+	return l.Creds, nil
 }
 
 type CredentialList struct {
@@ -123,9 +132,22 @@ type CredentialList struct {
 }
 
 type Credential struct {
-	DisplayName string
-	Timestamp   int64
-	Cred        webauthn.Credential
+	Base64URLEncodedId string
+	DisplayName        string
+	Timestamp          int64
+	Cred               webauthn.Credential
+}
+
+func (c *Credential) Default(now time.Time) {
+	if c.Base64URLEncodedId == "" {
+		c.Base64URLEncodedId = base64.RawURLEncoding.EncodeToString(c.Cred.ID)
+	}
+	if c.DisplayName == "" {
+		c.DisplayName = c.Base64URLEncodedId
+	}
+	if c.Timestamp == 0 {
+		c.Timestamp = now.Unix()
+	}
 }
 
 const (
@@ -141,7 +163,7 @@ func NewCredentialList(ctx context.Context, c kosmo.Client, userName string) (*C
 	cosmov1alpha1.SetControllerManaged(&sec)
 
 	if err := c.Get(ctx, types.NamespacedName{Name: sec.Name, Namespace: sec.Namespace}, &sec); err != nil {
-		if !errors.IsNotFound(err) {
+		if !apierrs.IsNotFound(err) {
 			return nil, fmt.Errorf("failed to get credential store: %w", err)
 		}
 	}
@@ -159,23 +181,19 @@ func NewCredentialList(ctx context.Context, c kosmo.Client, userName string) (*C
 	return &cl, nil
 }
 
-func (c *CredentialList) add(cred *Credential) {
-	notfound := true
-	for i, v := range c.Creds {
-		if base64.RawURLEncoding.EncodeToString(cred.Cred.ID) == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
-			c.Creds[i] = *cred
-			notfound = false
-			break
+func (c *CredentialList) add(cred *Credential) error {
+	for _, v := range c.Creds {
+		if cred.Base64URLEncodedId == v.Base64URLEncodedId {
+			return errors.New("already exists")
 		}
 	}
-	if notfound {
-		c.Creds = append(c.Creds, *cred)
-	}
+	c.Creds = append(c.Creds, *cred)
+	return nil
 }
 
-func (c *CredentialList) remove(id string) bool {
+func (c *CredentialList) remove(base64urlEncodedCredId string) bool {
 	for i, v := range c.Creds {
-		if id == base64.RawURLEncoding.EncodeToString(v.Cred.ID) {
+		if base64urlEncodedCredId == v.Base64URLEncodedId {
 			c.Creds = append(c.Creds[:i], c.Creds[i+1:]...)
 			return true
 		}
@@ -194,7 +212,7 @@ func (c *CredentialList) save(ctx context.Context) error {
 
 func (c *CredentialList) updateSecret(ctx context.Context) error {
 	if err := c.client.Update(ctx, c.sec); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrs.IsNotFound(err) {
 			if err := c.client.Create(ctx, c.sec); err != nil {
 				return fmt.Errorf("failed to create credential secret: %w", err)
 			}
