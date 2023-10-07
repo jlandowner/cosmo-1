@@ -337,6 +337,156 @@ var _ = Describe("WebAuthn", func() {
 		err = wu.RemoveCredential(ctx, cred2.Base64URLEncodedId)
 		Expect(err).To(HaveOccurred())
 	})
+
+	Describe("[UpdateCredential]", func() {
+		registerCredential := func() {
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+
+			cred := cosmowebauthn.Credential{
+				Base64URLEncodedId: "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU",
+				DisplayName:        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+				Timestamp:          1696436610,
+				Cred: webauthn.Credential{
+					ID:              []byte("D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU="),
+					PublicKey:       []byte("pQECAyYgASFYIHYeITFpgzmctVCg/uRgvZWsXxej2aPHG+iiAidcreaiIlggyQy0xtTdTiqYqPlh8SQ0ViQH1vprBBKV9rFZZUhXHxA="),
+					AttestationType: "none",
+					Transport:       nil,
+					Flags: webauthn.CredentialFlags{
+						UserPresent:    true,
+						UserVerified:   true,
+						BackupEligible: false,
+						BackupState:    false,
+					},
+					Authenticator: webauthn.Authenticator{
+						AAGUID:       []byte("rc4AAjW8xgpkiwsl8fBVAw=="),
+						SignCount:    0,
+						CloneWarning: false,
+						Attachment:   "",
+					},
+				},
+			}
+			wu.RegisterCredential(ctx, &cred)
+		}
+		removeCredential := func() {
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+			wu.RemoveCredential(ctx, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU")
+		}
+
+		run_test := func(wantErr bool, base64urlEncodedCredId string, displayName *string) {
+
+			By("registering credential")
+			registerCredential()
+			defer removeCredential()
+
+			By("---------------test start----------------")
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+
+			err = wu.UpdateCredential(ctx, base64urlEncodedCredId, displayName)
+			if err == nil {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(wantErr).To(BeFalse())
+
+			} else {
+				Expect(err).To(HaveOccurred())
+				Ω(err.Error()).To(MatchSnapShot())
+				Expect(wantErr).To(BeTrue())
+			}
+			By("---------------test end---------------")
+		}
+
+		DescribeTable("✅ success in normal context:",
+			run_test,
+			Entry("update display name", false, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU", pointer.String("new display name")),
+			Entry("update display name to empty", false, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU", pointer.String("")),
+			Entry("update display name to empty", false, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU", nil),
+			Entry("no change", false, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU", pointer.String("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36")),
+		)
+
+		DescribeTable("❌ fail with invalid request:",
+			run_test,
+			Entry("credential not found", true, "notfound", pointer.String("new display name")),
+		)
+	})
+
+	Describe("[RemoveCredential]", func() {
+		registerCredential := func() {
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+
+			cred := cosmowebauthn.Credential{
+				Base64URLEncodedId: "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU",
+				DisplayName:        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+				Timestamp:          1696436610,
+				Cred: webauthn.Credential{
+					ID:              []byte("D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU="),
+					PublicKey:       []byte("pQECAyYgASFYIHYeITFpgzmctVCg/uRgvZWsXxej2aPHG+iiAidcreaiIlggyQy0xtTdTiqYqPlh8SQ0ViQH1vprBBKV9rFZZUhXHxA="),
+					AttestationType: "none",
+					Transport:       nil,
+					Flags: webauthn.CredentialFlags{
+						UserPresent:    true,
+						UserVerified:   true,
+						BackupEligible: false,
+						BackupState:    false,
+					},
+					Authenticator: webauthn.Authenticator{
+						AAGUID:       []byte("rc4AAjW8xgpkiwsl8fBVAw=="),
+						SignCount:    0,
+						CloneWarning: false,
+						Attachment:   "",
+					},
+				},
+			}
+			wu.RegisterCredential(ctx, &cred)
+		}
+		removeCredential := func() {
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+			wu.RemoveCredential(ctx, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU")
+		}
+
+		run_test := func(wantErr bool, base64urlEncodedCredId string) {
+
+			By("registering credential")
+			registerCredential()
+			defer removeCredential()
+
+			By("---------------test start----------------")
+			ctx := context.Background()
+			wu, err := cosmowebauthn.GetUser(ctx, k8sClient, "test-user")
+			Expect(err).NotTo(HaveOccurred())
+
+			err = wu.RemoveCredential(ctx, base64urlEncodedCredId)
+			if err == nil {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(wantErr).To(BeFalse())
+
+			} else {
+				Expect(err).To(HaveOccurred())
+				Ω(err.Error()).To(MatchSnapShot())
+				Expect(wantErr).To(BeTrue())
+			}
+			By("---------------test end---------------")
+		}
+
+		DescribeTable("✅ success in normal context:",
+			run_test,
+			Entry("OK", false, "D09Kc9k4zeoxF1Bq1o0ePtUpTnZDOMDMOwQGnXaiqTU"),
+		)
+
+		DescribeTable("❌ fail with invalid request:",
+			run_test,
+			Entry("no credential id", true, ""),
+			Entry("credential not found", true, "notfound"),
+		)
+	})
 })
 
 func TestCredentials_Default(t *testing.T) {

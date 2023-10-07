@@ -16,7 +16,8 @@ export const WebAuthnService = {
   typeName: "dashboard.v1alpha1.WebAuthnService",
   methods: {
     /**
-     * BeginRegistration
+     * BeginRegistration returns CredentialCreateOptions to window.navigator.create() which is serialized as JSON string
+     * Also `publicKey.user.id`` and `publicKey.challenge` are base64url encoded
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.BeginRegistration
      */
@@ -27,7 +28,9 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * FinishRegistration
+     * FinishRegistration check the result of window.navigator.create()
+     * `rawId`, `response.clientDataJSON` and `response.attestationObject` in the result must be base64url encoded
+     * and all JSON must be serialized as string
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.FinishRegistration
      */
@@ -38,7 +41,8 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * BeginLogin
+     * BeginLogin returns CredentialRequestOptions to window.navigator.get() which is serialized as JSON string
+     * Also `publicKey.allowCredentials[*].id` and `publicKey.challenge` are base64url encoded
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.BeginLogin
      */
@@ -49,7 +53,9 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * FinishLogin
+     * FinishLogin check the result of window.navigator.get()
+     * `rawId`, `response.clientDataJSON`, `response.authenticatorData`, `response.signature`, `response.userHandle`
+     * in the result must be base64url encoded and all JSON must be serialized as string
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.FinishLogin
      */
@@ -60,7 +66,7 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * ListCredentials
+     * ListCredentials returns registered credential ID list
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.ListCredentials
      */
@@ -71,7 +77,7 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * UpdateCredential
+     * UpdateCredential updates registed credential's human readable infomations
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.UpdateCredential
      */
@@ -82,7 +88,7 @@ export const WebAuthnService = {
       kind: MethodKind.Unary,
     },
     /**
-     * DeleteCredential
+     * DeleteCredential remove registered credential
      *
      * @generated from rpc dashboard.v1alpha1.WebAuthnService.DeleteCredential
      */

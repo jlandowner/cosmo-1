@@ -911,13 +911,13 @@
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| BeginRegistration | [BeginRegistrationRequest](#dashboard-v1alpha1-BeginRegistrationRequest) | [BeginRegistrationResponse](#dashboard-v1alpha1-BeginRegistrationResponse) | BeginRegistration |
-| FinishRegistration | [FinishRegistrationRequest](#dashboard-v1alpha1-FinishRegistrationRequest) | [FinishRegistrationResponse](#dashboard-v1alpha1-FinishRegistrationResponse) | FinishRegistration |
-| BeginLogin | [BeginLoginRequest](#dashboard-v1alpha1-BeginLoginRequest) | [BeginLoginResponse](#dashboard-v1alpha1-BeginLoginResponse) | BeginLogin |
-| FinishLogin | [FinishLoginRequest](#dashboard-v1alpha1-FinishLoginRequest) | [FinishLoginResponse](#dashboard-v1alpha1-FinishLoginResponse) | FinishLogin |
-| ListCredentials | [ListCredentialsRequest](#dashboard-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#dashboard-v1alpha1-ListCredentialsResponse) | ListCredentials |
-| UpdateCredential | [UpdateCredentialRequest](#dashboard-v1alpha1-UpdateCredentialRequest) | [UpdateCredentialResponse](#dashboard-v1alpha1-UpdateCredentialResponse) | UpdateCredential |
-| DeleteCredential | [DeleteCredentialRequest](#dashboard-v1alpha1-DeleteCredentialRequest) | [DeleteCredentialResponse](#dashboard-v1alpha1-DeleteCredentialResponse) | DeleteCredential |
+| BeginRegistration | [BeginRegistrationRequest](#dashboard-v1alpha1-BeginRegistrationRequest) | [BeginRegistrationResponse](#dashboard-v1alpha1-BeginRegistrationResponse) | BeginRegistration returns CredentialCreateOptions to window.navigator.create() which is serialized as JSON string Also `publicKey.user.id`` and `publicKey.challenge` are base64url encoded |
+| FinishRegistration | [FinishRegistrationRequest](#dashboard-v1alpha1-FinishRegistrationRequest) | [FinishRegistrationResponse](#dashboard-v1alpha1-FinishRegistrationResponse) | FinishRegistration check the result of window.navigator.create() `rawId`, `response.clientDataJSON` and `response.attestationObject` in the result must be base64url encoded and all JSON must be serialized as string |
+| BeginLogin | [BeginLoginRequest](#dashboard-v1alpha1-BeginLoginRequest) | [BeginLoginResponse](#dashboard-v1alpha1-BeginLoginResponse) | BeginLogin returns CredentialRequestOptions to window.navigator.get() which is serialized as JSON string Also `publicKey.allowCredentials[*].id` and `publicKey.challenge` are base64url encoded |
+| FinishLogin | [FinishLoginRequest](#dashboard-v1alpha1-FinishLoginRequest) | [FinishLoginResponse](#dashboard-v1alpha1-FinishLoginResponse) | FinishLogin check the result of window.navigator.get() `rawId`, `response.clientDataJSON`, `response.authenticatorData`, `response.signature`, `response.userHandle` in the result must be base64url encoded and all JSON must be serialized as string |
+| ListCredentials | [ListCredentialsRequest](#dashboard-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#dashboard-v1alpha1-ListCredentialsResponse) | ListCredentials returns registered credential ID list |
+| UpdateCredential | [UpdateCredentialRequest](#dashboard-v1alpha1-UpdateCredentialRequest) | [UpdateCredentialResponse](#dashboard-v1alpha1-UpdateCredentialResponse) | UpdateCredential updates registed credential&#39;s human readable infomations |
+| DeleteCredential | [DeleteCredentialRequest](#dashboard-v1alpha1-DeleteCredentialRequest) | [DeleteCredentialResponse](#dashboard-v1alpha1-DeleteCredentialResponse) | DeleteCredential remove registered credential |
 
  
 

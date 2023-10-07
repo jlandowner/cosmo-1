@@ -61,19 +61,25 @@ const (
 
 // WebAuthnServiceClient is a client for the dashboard.v1alpha1.WebAuthnService service.
 type WebAuthnServiceClient interface {
-	// BeginRegistration
+	// BeginRegistration returns CredentialCreateOptions to window.navigator.create() which is serialized as JSON string
+	// Also `publicKey.user.id“ and `publicKey.challenge` are base64url encoded
 	BeginRegistration(context.Context, *connect_go.Request[v1alpha1.BeginRegistrationRequest]) (*connect_go.Response[v1alpha1.BeginRegistrationResponse], error)
-	// FinishRegistration
+	// FinishRegistration check the result of window.navigator.create()
+	// `rawId`, `response.clientDataJSON` and `response.attestationObject` in the result must be base64url encoded
+	// and all JSON must be serialized as string
 	FinishRegistration(context.Context, *connect_go.Request[v1alpha1.FinishRegistrationRequest]) (*connect_go.Response[v1alpha1.FinishRegistrationResponse], error)
-	// BeginLogin
+	// BeginLogin returns CredentialRequestOptions to window.navigator.get() which is serialized as JSON string
+	// Also `publicKey.allowCredentials[*].id` and `publicKey.challenge` are base64url encoded
 	BeginLogin(context.Context, *connect_go.Request[v1alpha1.BeginLoginRequest]) (*connect_go.Response[v1alpha1.BeginLoginResponse], error)
-	// FinishLogin
+	// FinishLogin check the result of window.navigator.get()
+	// `rawId`, `response.clientDataJSON`, `response.authenticatorData`, `response.signature`, `response.userHandle`
+	// in the result must be base64url encoded and all JSON must be serialized as string
 	FinishLogin(context.Context, *connect_go.Request[v1alpha1.FinishLoginRequest]) (*connect_go.Response[v1alpha1.FinishLoginResponse], error)
-	// ListCredentials
+	// ListCredentials returns registered credential ID list
 	ListCredentials(context.Context, *connect_go.Request[v1alpha1.ListCredentialsRequest]) (*connect_go.Response[v1alpha1.ListCredentialsResponse], error)
-	// UpdateCredential
+	// UpdateCredential updates registed credential's human readable infomations
 	UpdateCredential(context.Context, *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error)
-	// DeleteCredential
+	// DeleteCredential remove registered credential
 	DeleteCredential(context.Context, *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error)
 }
 
@@ -173,19 +179,25 @@ func (c *webAuthnServiceClient) DeleteCredential(ctx context.Context, req *conne
 
 // WebAuthnServiceHandler is an implementation of the dashboard.v1alpha1.WebAuthnService service.
 type WebAuthnServiceHandler interface {
-	// BeginRegistration
+	// BeginRegistration returns CredentialCreateOptions to window.navigator.create() which is serialized as JSON string
+	// Also `publicKey.user.id“ and `publicKey.challenge` are base64url encoded
 	BeginRegistration(context.Context, *connect_go.Request[v1alpha1.BeginRegistrationRequest]) (*connect_go.Response[v1alpha1.BeginRegistrationResponse], error)
-	// FinishRegistration
+	// FinishRegistration check the result of window.navigator.create()
+	// `rawId`, `response.clientDataJSON` and `response.attestationObject` in the result must be base64url encoded
+	// and all JSON must be serialized as string
 	FinishRegistration(context.Context, *connect_go.Request[v1alpha1.FinishRegistrationRequest]) (*connect_go.Response[v1alpha1.FinishRegistrationResponse], error)
-	// BeginLogin
+	// BeginLogin returns CredentialRequestOptions to window.navigator.get() which is serialized as JSON string
+	// Also `publicKey.allowCredentials[*].id` and `publicKey.challenge` are base64url encoded
 	BeginLogin(context.Context, *connect_go.Request[v1alpha1.BeginLoginRequest]) (*connect_go.Response[v1alpha1.BeginLoginResponse], error)
-	// FinishLogin
+	// FinishLogin check the result of window.navigator.get()
+	// `rawId`, `response.clientDataJSON`, `response.authenticatorData`, `response.signature`, `response.userHandle`
+	// in the result must be base64url encoded and all JSON must be serialized as string
 	FinishLogin(context.Context, *connect_go.Request[v1alpha1.FinishLoginRequest]) (*connect_go.Response[v1alpha1.FinishLoginResponse], error)
-	// ListCredentials
+	// ListCredentials returns registered credential ID list
 	ListCredentials(context.Context, *connect_go.Request[v1alpha1.ListCredentialsRequest]) (*connect_go.Response[v1alpha1.ListCredentialsResponse], error)
-	// UpdateCredential
+	// UpdateCredential updates registed credential's human readable infomations
 	UpdateCredential(context.Context, *connect_go.Request[v1alpha1.UpdateCredentialRequest]) (*connect_go.Response[v1alpha1.UpdateCredentialResponse], error)
-	// DeleteCredential
+	// DeleteCredential remove registered credential
 	DeleteCredential(context.Context, *connect_go.Request[v1alpha1.DeleteCredentialRequest]) (*connect_go.Response[v1alpha1.DeleteCredentialResponse], error)
 }
 

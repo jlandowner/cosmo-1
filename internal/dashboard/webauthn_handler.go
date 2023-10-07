@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,7 +21,8 @@ import (
 )
 
 func (s *Server) WebAuthnServiceHandler(mux *http.ServeMux) {
-	path, handler := dashboardv1alpha1connect.NewWebAuthnServiceHandler(s)
+	path, handler := dashboardv1alpha1connect.NewWebAuthnServiceHandler(s,
+		connect_go.WithInterceptors(s.validatorInterceptor()))
 	mux.Handle(path, s.contextMiddleware(handler))
 }
 
@@ -46,7 +46,7 @@ func convertCredentialsToDashCredentials(creds []cosmowebauthn.Credential) []*da
 	ret := make([]*dashv1alpha1.Credential, len(creds))
 	for i, cred := range creds {
 		ret[i] = &dashv1alpha1.Credential{
-			Id:          base64.RawURLEncoding.EncodeToString(cred.Cred.ID),
+			Id:          cred.Base64URLEncodedId,
 			DisplayName: cred.DisplayName,
 			Timestamp:   timestamppb.New(time.Unix(cred.Timestamp, 0)),
 		}
@@ -55,7 +55,7 @@ func convertCredentialsToDashCredentials(creds []cosmowebauthn.Credential) []*da
 }
 
 func webauthnErr(log *clog.Logger, err error) {
-	if e, ok := err.(*webauthnproto.Error); ok {
+	if e, ok := err.(*webauthnproto.Error); ok && e != nil {
 		log.Error(err, e.DevInfo)
 	}
 }

@@ -105,11 +105,16 @@ func (u *User) UpdateCredential(ctx context.Context, base64urlEncodedCredId stri
 
 	// update display name if not nil
 	if displayName != nil {
+		notfound := true
 		for i, v := range c.Creds {
 			if base64urlEncodedCredId == v.Base64URLEncodedId {
 				c.Creds[i].DisplayName = *displayName
+				notfound = false
 				break
 			}
+		}
+		if notfound {
+			return fmt.Errorf("credential not found")
 		}
 	}
 	return c.save(ctx)

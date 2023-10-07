@@ -57,7 +57,16 @@ func (m *BeginRegistrationRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := BeginRegistrationRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return BeginRegistrationRequestMultiError(errors)
@@ -265,9 +274,27 @@ func (m *FinishRegistrationRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := FinishRegistrationRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for CredentialCreationResponse
+	if utf8.RuneCountInString(m.GetCredentialCreationResponse()) < 1 {
+		err := FinishRegistrationRequestValidationError{
+			field:  "CredentialCreationResponse",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return FinishRegistrationRequestMultiError(errors)
@@ -475,7 +502,16 @@ func (m *BeginLoginRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := BeginLoginRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return BeginLoginRequestMultiError(errors)
@@ -683,9 +719,27 @@ func (m *FinishLoginRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := FinishLoginRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for CredentialRequestResult
+	if utf8.RuneCountInString(m.GetCredentialRequestResult()) < 1 {
+		err := FinishLoginRequestValidationError{
+			field:  "CredentialRequestResult",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return FinishLoginRequestMultiError(errors)
@@ -922,7 +976,16 @@ func (m *ListCredentialsRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := ListCredentialsRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return ListCredentialsRequestMultiError(errors)
@@ -1296,9 +1359,27 @@ func (m *DeleteCredentialRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := DeleteCredentialRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for CredId
+	if utf8.RuneCountInString(m.GetCredId()) < 1 {
+		err := DeleteCredentialRequestValidationError{
+			field:  "CredId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return DeleteCredentialRequestMultiError(errors)
@@ -1506,9 +1587,27 @@ func (m *UpdateCredentialRequest) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for UserName
+	if utf8.RuneCountInString(m.GetUserName()) < 1 {
+		err := UpdateCredentialRequestValidationError{
+			field:  "UserName",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for CredId
+	if utf8.RuneCountInString(m.GetCredId()) < 1 {
+		err := UpdateCredentialRequestValidationError{
+			field:  "CredId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	// no validation rules for CredDisplayName
 
