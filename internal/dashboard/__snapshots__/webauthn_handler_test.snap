@@ -12,7 +12,18 @@ SnapShot = 'not_found: failed to get user: User.cosmo-workspace.github.io "notfo
 ['Dashboard server [WebAuthn] [Login] ✅ success in begin login but error in finish login: cannot create mock for window.navigator.create() response 1']
 SnapShot = """
 {
-  \"credential_request_options\": \"{\\\"publicKey\\\":{\\\"challenge\\\":\\\"bytxTqPua7DUsWW4WmKvvyp4UoVcKmc9LmoM42AgoJI\\\",\\\"timeout\\\":300000,\\\"rpId\\\":\\\"localhost:8888\\\",\\\"allowCredentials\\\":[{\\\"type\\\":\\\"public-key\\\",\\\"id\\\":\\\"RDA5S2M5azR6ZW94RjFCcTFvMGVQdFVwVG5aRE9NRE1Pd1FHblhhaXFUVT0\\\"}],\\\"userVerification\\\":\\\"preferred\\\"}}\"
+  \"publicKey\": {
+    \"allowCredentials\": [
+      {
+        \"id\": \"RDA5S2M5azR6ZW94RjFCcTFvMGVQdFVwVG5aRE9NRE1Pd1FHblhhaXFUVT0\",
+        \"type\": \"public-key\"
+      }
+    ],
+    \"challenge\": \"CHALLENGE\",
+    \"rpId\": \"localhost:8888\",
+    \"timeout\": 300000,
+    \"userVerification\": \"preferred\"
+  }
 }
 """
 
@@ -28,7 +39,65 @@ SnapShot = 'not_found: failed to get user: User.cosmo-workspace.github.io "notfo
 ['Dashboard server [WebAuthn] [Registration] ✅ success in begin registration but error in finish registration: cannot create mock for window.navigator.create() response 1']
 SnapShot = """
 {
-  \"credential_creation_options\": \"{\\\"publicKey\\\":{\\\"rp\\\":{\\\"name\\\":\\\"COSMO Dashboard\\\",\\\"id\\\":\\\"localhost:8888\\\"},\\\"user\\\":{\\\"name\\\":\\\"user\\\",\\\"displayName\\\":\\\"user\\\",\\\"id\\\":\\\"YmZiYzI1OWNkN2MxNmYzZTljMTgwOTFjNWI3YjQ3Njg3ZjJlNDIxN2VlYjA1OGIxYjhhYmUwZTA2NDJiZDhmNw\\\"},\\\"challenge\\\":\\\"qK3odrm0dIuuAYEVINbTTH9nq4gnbQsnBLNUZ1hl6lY\\\",\\\"pubKeyCredParams\\\":[{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-7},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-35},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-36},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-257},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-258},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-259},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-37},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-38},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-39},{\\\"type\\\":\\\"public-key\\\",\\\"alg\\\":-8}],\\\"timeout\\\":300000,\\\"authenticatorSelection\\\":{\\\"requireResidentKey\\\":false,\\\"userVerification\\\":\\\"preferred\\\"}}}\"
+  \"publicKey\": {
+    \"authenticatorSelection\": {
+      \"requireResidentKey\": false,
+      \"userVerification\": \"preferred\"
+    },
+    \"challenge\": \"CHALLENGE\",
+    \"pubKeyCredParams\": [
+      {
+        \"alg\": -7,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -35,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -36,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -257,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -258,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -259,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -37,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -38,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -39,
+        \"type\": \"public-key\"
+      },
+      {
+        \"alg\": -8,
+        \"type\": \"public-key\"
+      }
+    ],
+    \"rp\": {
+      \"id\": \"localhost:8888\",
+      \"name\": \"COSMO Dashboard\"
+    },
+    \"timeout\": 300000,
+    \"user\": {
+      \"displayName\": \"user\",
+      \"id\": \"YmZiYzI1OWNkN2MxNmYzZTljMTgwOTFjNWI3YjQ3Njg3ZjJlNDIxN2VlYjA1OGIxYjhhYmUwZTA2NDJiZDhmNw\",
+      \"name\": \"user\"
+    }
+  }
 }
 """
 

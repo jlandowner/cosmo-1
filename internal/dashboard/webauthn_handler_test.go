@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/bufbuild/connect-go"
@@ -70,7 +71,7 @@ var _ = Describe("Dashboard server [WebAuthn]", func() {
 			if err == nil {
 				Expect(wantErrBegin).To(BeFalse())
 				Expect(err).NotTo(HaveOccurred())
-				Ω(resBegin.Msg).To(MatchSnapShot())
+				Ω(webauthnSnapshot(resBegin.Msg.CredentialCreationOptions)).To(MatchSnapShot())
 
 				By("---------------FinishRegistration----------------")
 				resFin, err := client.FinishRegistration(ctx, connect.NewRequest(reqFin))
@@ -162,7 +163,7 @@ var _ = Describe("Dashboard server [WebAuthn]", func() {
 			resBegin, err := client.BeginLogin(ctx, connect.NewRequest(reqBegin))
 			if err == nil {
 				Expect(err).NotTo(HaveOccurred())
-				Ω(resBegin.Msg).To(MatchSnapShot())
+				Ω(webauthnSnapshot(resBegin.Msg.CredentialRequestOptions)).To(MatchSnapShot())
 				Expect(wantErrBegin).To(BeFalse())
 
 				By("---------------FinishLogin----------------")
@@ -357,3 +358,19 @@ var _ = Describe("Dashboard server [WebAuthn]", func() {
 		)
 	})
 })
+
+func webauthnSnapshot(jsondata string) map[string]interface{} {
+	var v map[string]interface{}
+	err := json.Unmarshal([]byte(jsondata), &v)
+	Expect(err).NotTo(HaveOccurred())
+
+	if vv, ok := v["publicKey"]; ok {
+		if vvi, ok := vv.(map[string]interface{}); ok {
+			if _, ok := vvi["challenge"]; ok {
+				vvi["challenge"] = "CHALLENGE"
+			}
+		}
+	}
+
+	return v
+}
