@@ -26,14 +26,16 @@ Login to COSMO Dashboard Server.
 type LoginOption struct {
 	*cli.RootOptions
 
-	UserName string
-	Password string
+	UserName      string
+	Password      string
+	PasswordStdin bool
 }
 
 func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &LoginOption{RootOptions: opt}
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
-	cmd.Flags().StringVar(&o.Password, "password", "", "[insecure] input password instead of environment variables or stdin")
+	cmd.Flags().StringVar(&o.Password, "password", "", "[CAUTION] insecure development purpose. use --password-stdin instead")
+	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input new password from stdin pipe")
 	return cmd
 }
 
@@ -44,6 +46,9 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("invalid arguements")
 	}
+	if o.Password == "" && !o.PasswordStdin {
+		return fmt.Errorf("--password-stdin is required")
+	}
 	return nil
 }
 
@@ -53,6 +58,13 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 	}
 	if len(args) > 0 {
 		o.UserName = args[0]
+	}
+	if o.PasswordStdin {
+		input, err := cli.ReadFromPipedStdin()
+		if err != nil {
+			return fmt.Errorf("failed to read from stdin pipe: %w", err)
+		}
+		o.Password = input
 	}
 	return nil
 }
@@ -82,6 +94,8 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
+
+	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.GetDashboardURL(), o.UserName)
 
 	return nil
 
