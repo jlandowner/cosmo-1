@@ -27,7 +27,6 @@ type CreateOption struct {
 	AuthType       string
 	PrivilegedRole bool
 	Addons         []string
-	ClusterAddons  []string
 
 	userAddons []*dashv1alpha1.UserAddon
 }
@@ -40,7 +39,6 @@ func CreateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	cmd.Flags().StringVar(&o.AuthType, "auth-type", cosmov1alpha1.UserAuthTypePasswordSecert.String(), "user auth type 'password-secret'(default),'ldap'")
 	cmd.Flags().BoolVar(&o.PrivilegedRole, "admin", false, "add cosmo-admin role (privileged)")
 	cmd.Flags().StringArrayVar(&o.Addons, "addon", nil, "user addons\nformat is '--addon TEMPLATE_NAME1,KEY:VAL,KEY:VAL --addon TEMPLATE_NAME2,KEY:VAL ...' ")
-	cmd.Flags().StringArrayVar(&o.ClusterAddons, "cluster-addon", nil, "user addons by ClusterTemplate\nformat is '--cluster-addon TEMPLATE_NAME1,KEY:VAL,KEY:VAL --cluster-addon TEMPLATE_NAME2,KEY:VAL ...' ")
 	return cmd
 }
 
@@ -68,16 +66,9 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 		o.Roles = []string{cosmov1alpha1.PrivilegedRoleName}
 	}
 
-	o.userAddons = make([]*dashv1alpha1.UserAddon, 0, len(o.Addons)+len(o.ClusterAddons))
+	o.userAddons = make([]*dashv1alpha1.UserAddon, 0, len(o.Addons))
 	if len(o.Addons) > 0 {
 		userAddons, err := parseUserAddonOptions(o.Addons, false)
-		if err != nil {
-			return err
-		}
-		o.userAddons = append(o.userAddons, userAddons...)
-	}
-	if len(o.ClusterAddons) > 0 {
-		userAddons, err := parseUserAddonOptions(o.ClusterAddons, true)
 		if err != nil {
 			return err
 		}
