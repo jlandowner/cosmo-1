@@ -64,8 +64,8 @@ func (o *RootOptions) AddFlags(cmd *cobra.Command) {
 	cmd.SetOut(o.Out)
 	cmd.SetErr(o.ErrOut)
 
-	cmd.PersistentFlags().BoolVar(&o.UseKubeAPI,
-		"use-k", false, "use kubernetes API client instead of cosmo dashboard API client")
+	cmd.PersistentFlags().BoolVarP(&o.UseKubeAPI,
+		"kube", "k", false, "use kubernetes API client instead of cosmo dashboard API client")
 
 	cmd.PersistentFlags().StringVar(&o.KubeConfigPath,
 		"kubeconfig", "", "kubeconfig file path. env:KUBECONFIG (default: $HOME/.kube/config)")
