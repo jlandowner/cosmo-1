@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
@@ -173,7 +174,7 @@ func (o *CreateOption) CreateUserWithDashClient(ctx context.Context) (*string, e
 
 func (o *CreateOption) CreateUserWithKubeClient(ctx context.Context) (*string, error) {
 	c := o.KosmoClient
-	if _, err := c.CreateUser(ctx, o.UserName, o.DisplayName, o.Roles, o.AuthType, convertDashv1alpha1UserAddonToUserAddon(o.userAddons)); err != nil {
+	if _, err := c.CreateUser(ctx, o.UserName, o.DisplayName, o.Roles, o.AuthType, apiconv.D2C_UserAddons(o.userAddons)); err != nil {
 		return nil, err
 	}
 	if o.AuthType == cosmov1alpha1.UserAuthTypePasswordSecert.String() {

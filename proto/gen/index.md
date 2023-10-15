@@ -194,6 +194,7 @@
 | is_default_user_addon | [bool](#bool) | optional |  |
 | is_cluster_scope | [bool](#bool) |  |  |
 | required_useraddons | [string](#string) | repeated |  |
+| userroles | [string](#string) | repeated |  |
 
 
 

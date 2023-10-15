@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
@@ -211,64 +212,5 @@ func (o *GetOption) ListUsersByKubeClient(ctx context.Context) ([]*dashv1alpha1.
 	if err != nil {
 		return nil, err
 	}
-	return convertUsersToDashv1alpha1Users(users), nil
-}
-
-func convertUsersToDashv1alpha1Users(users []cosmov1alpha1.User) []*dashv1alpha1.User {
-	ts := make([]*dashv1alpha1.User, 0, len(users))
-	for _, v := range users {
-		ts = append(ts, convertUserToDashv1alpha1User(v))
-	}
-	return ts
-}
-
-func convertUserToDashv1alpha1User(user cosmov1alpha1.User) *dashv1alpha1.User {
-	addons := make([]*dashv1alpha1.UserAddon, len(user.Spec.Addons))
-	for i, v := range user.Spec.Addons {
-		addons[i] = &dashv1alpha1.UserAddon{
-			Template:      v.Template.Name,
-			ClusterScoped: v.Template.ClusterScoped,
-			Vars:          v.Vars,
-		}
-	}
-
-	return &dashv1alpha1.User{
-		Name:        user.Name,
-		DisplayName: user.Spec.DisplayName,
-		Roles:       convertUserRolesToStringSlice(user.Spec.Roles),
-		AuthType:    user.Spec.AuthType.String(),
-		Addons:      addons,
-		Status:      string(user.Status.Phase),
-	}
-}
-
-func convertUserRolesToStringSlice(apiRoles []cosmov1alpha1.UserRole) []string {
-	roles := make([]string, 0, len(apiRoles))
-	for _, v := range apiRoles {
-		roles = append(roles, v.Name)
-	}
-	return roles
-}
-
-func convertStringSliceToUserRoles(roles []string) []cosmov1alpha1.UserRole {
-	apiRoles := make([]cosmov1alpha1.UserRole, 0, len(roles))
-	for _, v := range roles {
-		apiRoles = append(apiRoles, cosmov1alpha1.UserRole{Name: v})
-	}
-	return apiRoles
-}
-
-func convertDashv1alpha1UserAddonToUserAddon(addons []*dashv1alpha1.UserAddon) []cosmov1alpha1.UserAddon {
-	a := make([]cosmov1alpha1.UserAddon, len(addons))
-	for i, v := range addons {
-		addon := cosmov1alpha1.UserAddon{
-			Template: cosmov1alpha1.UserAddonTemplateRef{
-				Name:          v.Template,
-				ClusterScoped: v.ClusterScoped,
-			},
-			Vars: v.Vars,
-		}
-		a[i] = addon
-	}
-	return a
+	return apiconv.C2D_Users(users), nil
 }
