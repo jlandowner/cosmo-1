@@ -9,16 +9,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/create"
-	// del "github.com/cosmo-workspace/cosmo/internal/cmd/delete"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/get"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/netrule"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/run"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/stop"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/template"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/user"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/version"
-	// "github.com/cosmo-workspace/cosmo/internal/cmd/workspace"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/create"
+	del "github.com/cosmo-workspace/cosmo/internal/cmd/v1/delete"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/get"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/login"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/user"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/version"
@@ -46,9 +39,9 @@ MIT 2023 cosmo-workspace/cosmo
 	// workspace.AddCommand(rootCmd, o)
 	// netrule.AddCommand(rootCmd, o)
 
-	// create.AddCommand(rootCmd, o)
-	// get.AddCommand(rootCmd, o)
-	// del.AddCommand(rootCmd, o)
+	create.AddCommand(rootCmd, o)
+	get.AddCommand(rootCmd, o)
+	del.AddCommand(rootCmd, o)
 	// run.AddCommand(rootCmd, o)
 	// stop.AddCommand(rootCmd, o)
 
