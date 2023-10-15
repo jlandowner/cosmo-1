@@ -19,10 +19,14 @@ Once you create User, Kubernetes Namespace is created and bound to the User.
 `,
 	}
 
-	// userCmd.AddCommand(resetPasswordCmd(&cobra.Command{
-	// 	Use:   "reset-password USER_NAME",
-	// 	Short: "Reset user password",
-	// }, o))
+	userCmd.AddCommand(resetPasswordCmd(&cobra.Command{
+		Use:   "reset-password USER_NAME",
+		Short: "Reset password",
+	}, o))
+	userCmd.AddCommand(changePasswordCmd(&cobra.Command{
+		Use:   "change-password USER_NAME",
+		Short: "Change password",
+	}, o))
 	userCmd.AddCommand(CreateCmd(&cobra.Command{
 		Use:   "create USER_NAME",
 		Short: "Create user",
