@@ -1,13 +1,14 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
 	"github.com/mattn/go-isatty"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func ReadFromPipedStdin() (string, error) {
@@ -21,12 +22,20 @@ func ReadFromPipedStdin() (string, error) {
 	return strings.Replace(string(input), "\n", "", 1), nil
 }
 
-func AskInput(prompt string) (string, error) {
+func AskInput(prompt string, silent bool) (string, error) {
 	fmt.Print(prompt)
-	password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+
+	var input []byte
+	var err error
+	if silent {
+		input, err = term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+	} else {
+		r := bufio.NewReader(os.Stdin)
+		input, err = r.ReadBytes('\n')
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to read input : %w", err)
 	}
-	fmt.Println()
-	return string(password), nil
+	return string(input), nil
 }

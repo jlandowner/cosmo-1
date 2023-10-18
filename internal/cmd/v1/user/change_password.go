@@ -60,13 +60,13 @@ func (o *changePasswordOption) Complete(cmd *cobra.Command, args []string) error
 		o.newPassword = input
 
 	} else {
-		input, err := cli.AskInput("Current password: ")
+		input, err := cli.AskInput("Current password: ", true)
 		if err != nil {
 			return err
 		}
 		o.currentPassword = input
 
-		input, err = cli.AskInput("New password    : ")
+		input, err = cli.AskInput("New password    : ", true)
 		if err != nil {
 			return err
 		}
