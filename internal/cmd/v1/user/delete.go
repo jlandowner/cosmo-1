@@ -17,7 +17,7 @@ import (
 type DeleteOption struct {
 	*cli.RootOptions
 
-	UserName string
+	UserNames []string
 }
 
 func DeleteCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
@@ -40,7 +40,7 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Complete(cmd, args); err != nil {
 		return err
 	}
-	o.UserName = args[0]
+	o.UserNames = args
 	return nil
 }
 
@@ -56,23 +56,25 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	if o.UseKubeAPI {
-		if err := o.DeleteUserWithKubeClient(ctx); err != nil {
-			return err
+	for _, v := range o.UserNames {
+		if o.UseKubeAPI {
+			if err := o.DeleteUserWithKubeClient(ctx, v); err != nil {
+				return err
+			}
+		} else {
+			if err := o.DeleteUserWithDashClient(ctx, v); err != nil {
+				return err
+			}
 		}
-	} else {
-		if err := o.DeleteUserWithDashClient(ctx); err != nil {
-			return err
-		}
+		cmdutil.PrintfColorInfo(o.Out, "Successfully deleted user %s\n", v)
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully deleted user %s\n", o.UserName)
 	return nil
 }
 
-func (o *DeleteOption) DeleteUserWithDashClient(ctx context.Context) error {
+func (o *DeleteOption) DeleteUserWithDashClient(ctx context.Context, userName string) error {
 	req := &dashv1alpha1.DeleteUserRequest{
-		UserName: o.UserName,
+		UserName: userName,
 	}
 	c := o.CosmoDashClient
 	res, err := c.UserServiceClient.DeleteUser(ctx, cli.NewRequestWithToken(req, o.CliConfig))
@@ -84,9 +86,9 @@ func (o *DeleteOption) DeleteUserWithDashClient(ctx context.Context) error {
 	return nil
 }
 
-func (o *DeleteOption) DeleteUserWithKubeClient(ctx context.Context) error {
+func (o *DeleteOption) DeleteUserWithKubeClient(ctx context.Context, userName string) error {
 	c := o.KosmoClient
-	if _, err := c.DeleteUser(ctx, o.UserName); err != nil {
+	if _, err := c.DeleteUser(ctx, userName); err != nil {
 		return err
 	}
 	return nil

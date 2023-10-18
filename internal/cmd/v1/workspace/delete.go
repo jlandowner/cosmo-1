@@ -17,8 +17,8 @@ import (
 type DeleteOption struct {
 	*cli.RootOptions
 
-	WorkspaceName string
-	UserName      string
+	WorkspaceNames []string
+	UserName       string
 }
 
 func DeleteCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
@@ -42,7 +42,7 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Complete(cmd, args); err != nil {
 		return err
 	}
-	o.WorkspaceName = args[0]
+	o.WorkspaceNames = args
 
 	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
@@ -62,24 +62,26 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	if o.UseKubeAPI {
-		if err := o.DeleteWorkspaceWithKubeClient(ctx); err != nil {
-			return err
+	for _, v := range o.WorkspaceNames {
+		if o.UseKubeAPI {
+			if err := o.DeleteWorkspaceWithKubeClient(ctx, v); err != nil {
+				return err
+			}
+		} else {
+			if err := o.DeleteWorkspaceWithDashClient(ctx, v); err != nil {
+				return err
+			}
 		}
-	} else {
-		if err := o.DeleteWorkspaceWithDashClient(ctx); err != nil {
-			return err
-		}
+		cmdutil.PrintfColorInfo(o.Out, "Successfully deleted workspace %s\n", v)
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully deleted workspace %s\n", o.WorkspaceName)
 	return nil
 }
 
-func (o *DeleteOption) DeleteWorkspaceWithDashClient(ctx context.Context) error {
+func (o *DeleteOption) DeleteWorkspaceWithDashClient(ctx context.Context, workspaceName string) error {
 	req := &dashv1alpha1.DeleteWorkspaceRequest{
 		UserName: o.UserName,
-		WsName:   o.WorkspaceName,
+		WsName:   workspaceName,
 	}
 	c := o.CosmoDashClient
 	res, err := c.WorkspaceServiceClient.DeleteWorkspace(ctx, cli.NewRequestWithToken(req, o.CliConfig))
@@ -91,9 +93,9 @@ func (o *DeleteOption) DeleteWorkspaceWithDashClient(ctx context.Context) error 
 	return nil
 }
 
-func (o *DeleteOption) DeleteWorkspaceWithKubeClient(ctx context.Context) error {
+func (o *DeleteOption) DeleteWorkspaceWithKubeClient(ctx context.Context, workspaceName string) error {
 	c := o.KosmoClient
-	if _, err := c.DeleteWorkspace(ctx, o.WorkspaceName, o.UserName); err != nil {
+	if _, err := c.DeleteWorkspace(ctx, workspaceName, o.UserName); err != nil {
 		return err
 	}
 	return nil
