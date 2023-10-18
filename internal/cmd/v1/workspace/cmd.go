@@ -43,6 +43,16 @@ List workspaceaddon templates in cluster.
 		Aliases: []string{"rm"},
 		Short:   "Delete workspace",
 	}, o))
+	workspaceCmd.AddCommand(ResumeCmd(&cobra.Command{
+		Use:     "resume",
+		Short:   "Resume stopped workspaces",
+		Aliases: []string{"start", "run"},
+	}, o))
+	workspaceCmd.AddCommand(SuspendCmd(&cobra.Command{
+		Use:     "suspend",
+		Short:   "Suspend workspaces",
+		Aliases: []string{"stop"},
+	}, o))
 
 	cmd.AddCommand(workspaceCmd)
 }

@@ -13,6 +13,8 @@ import (
 	del "github.com/cosmo-workspace/cosmo/internal/cmd/v1/delete"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/get"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/login"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/resume"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/suspend"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/user"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/version"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/workspace"
@@ -35,16 +37,17 @@ MIT 2023 cosmo-workspace/cosmo
 
 	version.AddCommand(rootCmd, o)
 	login.AddCommand(rootCmd, o)
-	user.AddCommand(rootCmd, o)
-	workspace.AddCommand(rootCmd, o)
-	// template.AddCommand(rootCmd, o)
-	// netrule.AddCommand(rootCmd, o)
 
 	create.AddCommand(rootCmd, o)
 	get.AddCommand(rootCmd, o)
 	del.AddCommand(rootCmd, o)
-	// run.AddCommand(rootCmd, o)
-	// stop.AddCommand(rootCmd, o)
+	resume.AddCommand(rootCmd, o)
+	suspend.AddCommand(rootCmd, o)
+
+	user.AddCommand(rootCmd, o)
+	workspace.AddCommand(rootCmd, o)
+	// template.AddCommand(rootCmd, o)
+	// netrule.AddCommand(rootCmd, o)
 
 	return rootCmd
 }
