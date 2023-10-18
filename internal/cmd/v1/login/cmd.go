@@ -34,7 +34,6 @@ type LoginOption struct {
 func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &LoginOption{RootOptions: opt}
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
-	cmd.Flags().StringVar(&o.Password, "password", "", "[CAUTION] insecure development purpose. use --password-stdin instead")
 	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input new password from stdin pipe")
 	return cmd
 }
@@ -42,12 +41,6 @@ func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
-	}
-	if len(args) != 1 {
-		return fmt.Errorf("invalid arguements")
-	}
-	if o.Password == "" && !o.PasswordStdin {
-		return fmt.Errorf("--password-stdin is required")
 	}
 	return nil
 }
@@ -59,10 +52,33 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		o.UserName = args[0]
 	}
+
+	if o.DashboardURL == "" {
+		input, err := cli.AskInput(fmt.Sprintf("Dasboard URL(%s): ", o.DashboardURL), false)
+		if err != nil {
+			return err
+		}
+		o.DashboardURL = input
+	}
+
+	if o.UserName == "" {
+		input, err := cli.AskInput("UserName: ", false)
+		if err != nil {
+			return err
+		}
+		o.UserName = input
+	}
+
 	if o.PasswordStdin {
 		input, err := cli.ReadFromPipedStdin()
 		if err != nil {
 			return fmt.Errorf("failed to read from stdin pipe: %w", err)
+		}
+		o.Password = input
+	} else {
+		input, err := cli.AskInput("Password: ", true)
+		if err != nil {
+			return err
 		}
 		o.Password = input
 	}
@@ -95,7 +111,7 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.GetDashboardURL(), o.UserName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.DashboardURL, o.UserName)
 
 	return nil
 

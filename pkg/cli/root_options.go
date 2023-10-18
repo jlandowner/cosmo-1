@@ -101,7 +101,10 @@ func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config file: %w", err)
 	}
 	o.CliConfig = cfg
-	cfg.Endpoint = o.GetDashboardURL()
+	o.DashboardURL, err = o.GetDashboardURL()
+	if err != nil {
+		return fmt.Errorf("failed to get dashboard URL: %w", err)
+	}
 
 	if o.UseKubeAPI && o.KosmoClient == nil {
 		if err := o.buildKosmoClient(); err != nil {
@@ -144,20 +147,20 @@ func (o *RootOptions) GetConfigFilePath() (string, error) {
 	}
 }
 
-func (o *RootOptions) GetDashboardURL() string {
+func (o *RootOptions) GetDashboardURL() (string, error) {
 	if o.DashboardURL != "" {
-		return o.DashboardURL
+		return o.DashboardURL, nil
 	} else if envURL := os.Getenv(ENV_DASHBOARD_URL); envURL != "" {
-		return envURL
+		return envURL, nil
 	} else if o.CliConfig.Endpoint != "" {
-		return o.CliConfig.Endpoint
+		return o.CliConfig.Endpoint, nil
 	} else {
-		return "http://localhost:8888"
+		return "", fmt.Errorf("failed to recognize dashboard URL")
 	}
 }
 
 func (o *RootOptions) buildDashClient() error {
-	baseURL, err := url.Parse(o.GetDashboardURL())
+	baseURL, err := url.Parse(o.DashboardURL)
 	if err != nil {
 		return err
 	}
