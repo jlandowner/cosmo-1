@@ -94,7 +94,16 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 		users, err = o.ListUsersWithDashClient(ctx)
 		if err != nil {
 			if connect_go.CodeOf(err) == connect_go.CodePermissionDenied {
-				o.Logr.Info("WARNING: Without Admin roles, you can get only login user")
+
+				if len(o.UserNames) == 0 {
+					cmdutil.PrintfColorErr(o.ErrOut, "WARNING: Without Admin roles, you can get only login user\n")
+				} else {
+					for _, v := range o.UserNames {
+						if v != o.CliConfig.User {
+							return fmt.Errorf("permission denied: failed to get user: %s", v)
+						}
+					}
+				}
 				me, err := o.GetUserWithDashClient(ctx, o.CliConfig.User)
 				if err != nil {
 					return err

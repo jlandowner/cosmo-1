@@ -47,10 +47,10 @@ func (c *Client) GetWorkspace(ctx context.Context, name, namespace string) (*cos
 }
 
 func (c *Client) ListWorkspacesByUserName(ctx context.Context, username string) ([]cosmov1alpha1.Workspace, error) {
-	return c.ListWorkspaces(ctx, cosmov1alpha1.UserNamespace(username))
+	return c.listWorkspaces(ctx, cosmov1alpha1.UserNamespace(username))
 }
 
-func (c *Client) ListWorkspaces(ctx context.Context, namespace string) ([]cosmov1alpha1.Workspace, error) {
+func (c *Client) listWorkspaces(ctx context.Context, namespace string) ([]cosmov1alpha1.Workspace, error) {
 	log := clog.FromContext(ctx).WithCaller()
 
 	if _, err := c.GetUser(ctx, cosmov1alpha1.UserNameByNamespace(namespace)); err != nil {
