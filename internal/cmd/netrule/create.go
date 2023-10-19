@@ -93,12 +93,7 @@ func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get workspace: %v", err)
 	}
-	index := -1
-	for i, v := range ws.Spec.Network {
-		if v.UniqueKey() == o.rule.UniqueKey() {
-			index = i
-		}
-	}
+	index := cosmov1alpha1.GetNetworkRuleIndex(ws.Spec.Network, o.rule)
 
 	if _, err := c.AddNetworkRule(ctx, o.WorkspaceName, o.User, o.rule, index); err != nil {
 		return err

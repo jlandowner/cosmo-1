@@ -30,7 +30,7 @@ func SuspendCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 
-	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name")
+	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 
 	return cmd
 }

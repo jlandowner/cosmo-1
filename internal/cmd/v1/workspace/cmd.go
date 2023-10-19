@@ -53,6 +53,21 @@ List workspaceaddon templates in cluster.
 		Short:   "Suspend workspaces",
 		Aliases: []string{"stop"},
 	}, o))
+	workspaceCmd.AddCommand(GetNetworkCmd(&cobra.Command{
+		Use:     "get-network WORKSPACE_NAME",
+		Short:   "Get workspace network",
+		Aliases: []string{"get-ns", "ns", "network", "get-networks"},
+	}, o))
+	workspaceCmd.AddCommand(UpsertNetworkCmd(&cobra.Command{
+		Use:     "upsert-network WORKSPACE_NAME --port 8080",
+		Short:   "Upsert workspace network",
+		Aliases: []string{"upsert-ns", "add-ns", "add-network"},
+	}, o))
+	workspaceCmd.AddCommand(RemoveNetworkCmd(&cobra.Command{
+		Use:     "remove-network WORKSPACE_NAME --port 8080",
+		Short:   "Remove workspace network",
+		Aliases: []string{"remove-ns", "delete-ns", "delete-network"},
+	}, o))
 
 	cmd.AddCommand(workspaceCmd)
 }

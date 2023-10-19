@@ -30,17 +30,16 @@ func CreateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &CreateOption{RootOptions: cliOpt}
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
-	cmd.Flags().StringVarP(&o.Template, "template", "t", "", "template name (required)")
+	cmd.Flags().StringVarP(&o.Template, "template", "t", "", "template name (Required)")
+	cmd.MarkFlagRequired("template")
 	cmd.Flags().StringVar(&o.RawVars, "vars", "", "template vars. the format is VarName:VarValue. also it can be set multiple vars by conma separated list. (example: VAR1:VAL1,VAR2:VAL2)")
+
 	return cmd
 }
 
 func (o *CreateOption) Validate(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return errors.New("invalid args")
-	}
-	if o.Template == "" {
-		return errors.New("--template is required")
 	}
 	return nil
 }
