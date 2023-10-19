@@ -55,3 +55,23 @@ func C2D_NetworkRule(v cosmov1alpha1.NetworkRule) dashv1alpha1.NetworkRule {
 		Public:           v.Public,
 	}
 }
+
+func D2C_NetworkRules(netRules []*dashv1alpha1.NetworkRule) []cosmov1alpha1.NetworkRule {
+	rules := make([]cosmov1alpha1.NetworkRule, 0, len(netRules))
+	for _, v := range netRules {
+		r := D2C_NetworkRule(v)
+		rules = append(rules, r)
+	}
+	return rules
+}
+
+func D2C_NetworkRule(v *dashv1alpha1.NetworkRule) cosmov1alpha1.NetworkRule {
+	r := cosmov1alpha1.NetworkRule{
+		PortNumber:       v.PortNumber,
+		CustomHostPrefix: v.CustomHostPrefix,
+		HTTPPath:         v.HttpPath,
+		Public:           v.Public,
+	}
+	r.Default()
+	return r
+}

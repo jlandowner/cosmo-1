@@ -27,5 +27,10 @@ Delete cosmo resources
 		Short:   "Delete workspace. Alias of 'cosmoctl workspace delete'",
 		Aliases: []string{"ws", "workspaces"},
 	}, o))
+	deleteCmd.AddCommand(workspace.RemoveNetworkCmd(&cobra.Command{
+		Use:     "workspace-network WORKSPACE_NAME",
+		Short:   "Remove workspace network. Alias of 'cosmoctl workspace remove-network'",
+		Aliases: []string{"workspace-net", "ws-net"},
+	}, o))
 	cmd.AddCommand(deleteCmd)
 }
