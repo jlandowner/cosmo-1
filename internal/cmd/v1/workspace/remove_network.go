@@ -54,7 +54,8 @@ func (o *RemoveNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 	if len(args) > 0 {
 		o.WorkspaceName = args[0]
 	} else {
-		// o.WorkspaceName = GetCurrentWorkspaceName()
+		o.WorkspaceName = cli.GetCurrentWorkspaceName()
+		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}
 	if o.UserName == "" {
 		o.UserName = o.CliConfig.User

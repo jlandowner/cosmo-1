@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -200,4 +201,16 @@ func (o *RootOptions) buildKosmoClient() error {
 	o.KosmoClient = &baseclient
 
 	return nil
+}
+
+// GetCurrentWorkspaceName returns current workspace name.
+// If running in Workspace pod, hostname is like `ws1-workspace-575db4c9cd-h558m`
+// the first part is workspace name prefixed by cosmo.
+func GetCurrentWorkspaceName() string {
+	hostname := os.Getenv("HOSTNAME")
+	h := strings.Split(hostname, "-")
+	if len(h) > 3 && h[0] != "" {
+		return h[0]
+	}
+	return ""
 }
