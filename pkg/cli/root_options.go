@@ -88,6 +88,13 @@ func (o *RootOptions) Validate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func (o *RootOptions) CompleteWithoutClient(cmd *cobra.Command, args []string) error {
+	if err := o.buildLogger(); err != nil {
+		return fmt.Errorf("failed to build logger: %w", err)
+	}
+	return nil
+}
+
 func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.buildLogger(); err != nil {
 		return fmt.Errorf("failed to build logger: %w", err)

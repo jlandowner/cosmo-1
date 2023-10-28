@@ -81,7 +81,7 @@ func (o *generateOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *generateOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.RootOptions.Complete(cmd, args); err != nil {
+	if err := o.RootOptions.CompleteWithoutClient(cmd, args); err != nil {
 		return err
 	}
 	if o.Name == "" {
@@ -103,13 +103,20 @@ func (o *generateOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *generateOption) RunE(cmd *cobra.Command, args []string) error {
+	if err := o.Validate(cmd, args); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	if err := o.Complete(cmd, args); err != nil {
+		return fmt.Errorf("invalid options: %w", err)
+	}
 
 	input, err := cli.ReadFromPipedStdin()
 	if err != nil {
 		return err
 	}
+	o.Logr.Debug().Info(input)
 	if o.TypeWorkspace {
-		unsts, err := preTemplateBuild(string(input))
+		unsts, err := preTemplateBuild(input)
 		if err != nil {
 			return fmt.Errorf("failed to pre-build template: %w", err)
 		}
