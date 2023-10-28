@@ -19,7 +19,15 @@ func ReadFromPipedStdin() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read input from stdin: %w", err)
 	}
-	return strings.Replace(string(input), "\n", "", 1), nil
+	return replaceLast(string(input), "\n", ""), nil
+}
+
+func replaceLast(s, old, new string) string {
+	i := strings.LastIndex(s, old)
+	if i == -1 {
+		return s
+	}
+	return s[:i] + new + s[i+len(old):]
 }
 
 func AskInput(prompt string, silent bool) (string, error) {

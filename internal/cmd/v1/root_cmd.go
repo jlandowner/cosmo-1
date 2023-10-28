@@ -15,6 +15,7 @@ import (
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/login"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/resume"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/suspend"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/template"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/user"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/version"
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/workspace"
@@ -46,8 +47,7 @@ MIT 2023 cosmo-workspace/cosmo
 
 	user.AddCommand(rootCmd, o)
 	workspace.AddCommand(rootCmd, o)
-	// template.AddCommand(rootCmd, o)
-	// netrule.AddCommand(rootCmd, o)
+	template.AddCommand(rootCmd, o)
 
 	return rootCmd
 }
