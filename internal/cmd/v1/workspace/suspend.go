@@ -27,22 +27,11 @@ type SuspendOption struct {
 func SuspendCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &SuspendOption{RootOptions: cliOpt}
 
-	cmd.PersistentPreRunE = o.PreRunE
 	cmd.RunE = cmdutil.RunEHandler(o.RunE)
 
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 
 	return cmd
-}
-
-func (o *SuspendOption) PreRunE(cmd *cobra.Command, args []string) error {
-	if err := o.Validate(cmd, args); err != nil {
-		return fmt.Errorf("validation error: %w", err)
-	}
-	if err := o.Complete(cmd, args); err != nil {
-		return fmt.Errorf("invalid options: %w", err)
-	}
-	return nil
 }
 
 func (o *SuspendOption) Validate(cmd *cobra.Command, args []string) error {
@@ -68,6 +57,13 @@ func (o *SuspendOption) Complete(cmd *cobra.Command, args []string) error {
 }
 
 func (o *SuspendOption) RunE(cmd *cobra.Command, args []string) error {
+	if err := o.Validate(cmd, args); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	if err := o.Complete(cmd, args); err != nil {
+		return fmt.Errorf("invalid options: %w", err)
+	}
+
 	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
