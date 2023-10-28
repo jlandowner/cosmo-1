@@ -8,10 +8,9 @@ import (
 
 func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	templateCmd := &cobra.Command{
-		Use:   "template",
-		Short: "Template utitlity commands",
-		Long: `
-`,
+		Use:     "template",
+		Short:   "Template utitlity commands",
+		Aliases: []string{"tmpl"},
 	}
 	templateCmd.AddCommand(generateCmd(&cobra.Command{
 		Use:     "generate",
