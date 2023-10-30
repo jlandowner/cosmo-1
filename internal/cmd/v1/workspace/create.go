@@ -28,7 +28,7 @@ type CreateOption struct {
 
 func CreateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &CreateOption{RootOptions: cliOpt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	cmd.Flags().StringVarP(&o.Template, "template", "t", "", "template name (Required)")
 	cmd.MarkFlagRequired("template")
@@ -117,7 +117,7 @@ func (o *CreateOption) CreateWorkspaceWithDashClient(ctx context.Context) error 
 
 func (o *CreateOption) CreateWorkspaceWithKubeClient(ctx context.Context) error {
 	c := o.KosmoClient
-	if _, err := c.CreateWorkspace(ctx, o.WorkspaceName, o.UserName, o.Template, o.vars); err != nil {
+	if _, err := c.CreateWorkspace(ctx, o.UserName, o.WorkspaceName, o.Template, o.vars); err != nil {
 		return err
 	}
 	return nil

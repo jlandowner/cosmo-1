@@ -12,7 +12,6 @@ import (
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -29,7 +28,7 @@ type GetOption struct {
 
 func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'template' is available for now. e.g. 'template=x'")
 	return cmd

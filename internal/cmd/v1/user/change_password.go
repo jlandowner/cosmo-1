@@ -28,7 +28,7 @@ type changePasswordOption struct {
 
 func changePasswordCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &changePasswordOption{RootOptions: cliOpt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input new password from stdin pipe")
 	return cmd
 }

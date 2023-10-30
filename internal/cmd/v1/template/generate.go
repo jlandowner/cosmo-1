@@ -39,7 +39,7 @@ type generateOption struct {
 
 func generateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &generateOption{RootOptions: cliOpt}
-	cmd.RunE = o.RunE
+	cmd.RunE = cli.ConnectErrorHandler(o)
 
 	cmd.Flags().StringVarP(&o.Name, "name", "n", "", "template name (use directory name if not specified)")
 	cmd.Flags().StringVarP(&o.OutputFile, "output", "o", "", "write output into file (default: Stdout)")

@@ -27,7 +27,7 @@ type SuspendOption struct {
 func SuspendCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &SuspendOption{RootOptions: cliOpt}
 
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 

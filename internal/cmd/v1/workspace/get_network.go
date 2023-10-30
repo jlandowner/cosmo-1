@@ -11,7 +11,6 @@ import (
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -24,7 +23,7 @@ type GetNetworkOption struct {
 
 func GetNetworkCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetNetworkOption{RootOptions: opt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	return cmd
 }

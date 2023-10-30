@@ -33,7 +33,7 @@ type LoginOption struct {
 
 func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &LoginOption{RootOptions: opt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input new password from stdin pipe")
 	return cmd
 }
@@ -104,6 +104,7 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	}
 	o.CliConfig.Token = ses
 	o.CliConfig.User = o.UserName
+	o.CliConfig.Endpoint = o.DashboardURL
 
 	// save session
 	err = o.CliConfig.Save()
