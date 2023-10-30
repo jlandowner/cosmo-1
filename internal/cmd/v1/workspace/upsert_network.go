@@ -31,7 +31,7 @@ type UpsertNetworkOption struct {
 func UpsertNetworkCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &UpsertNetworkOption{RootOptions: cliOpt}
 
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	cmd.Flags().Int32Var(&o.PortNumber, "port", 0, "serivce port number (Required)")
 	cmd.MarkFlagRequired("port")

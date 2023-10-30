@@ -21,7 +21,7 @@ type resetPasswordOption struct {
 
 func resetPasswordCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &resetPasswordOption{changePasswordOption: &changePasswordOption{RootOptions: cliOpt}}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().BoolVar(&o.Force, "force", false, "not ask confirmation")
 	return cmd
 }

@@ -33,11 +33,11 @@ type CreateOption struct {
 
 func CreateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &CreateOption{RootOptions: cliOpt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVar(&o.DisplayName, "display-name", "", "user display name (default: same as USER_NAME)")
 	cmd.Flags().StringSliceVar(&o.Roles, "role", nil, "user roles")
 	cmd.Flags().StringVar(&o.AuthType, "auth-type", cosmov1alpha1.UserAuthTypePasswordSecert.String(), "user auth type 'password-secret'(default),'ldap'")
-	cmd.Flags().BoolVar(&o.PrivilegedRole, "admin", false, "add cosmo-admin role (privileged)")
+	cmd.Flags().BoolVar(&o.PrivilegedRole, "privileged", false, "add cosmo-admin role (privileged)")
 	cmd.Flags().StringArrayVar(&o.Addons, "addon", nil, "user addons\nformat is '--addon TEMPLATE_NAME1,KEY:VAL,KEY:VAL --addon TEMPLATE_NAME2,KEY:VAL ...' ")
 	return cmd
 }

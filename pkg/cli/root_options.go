@@ -99,26 +99,25 @@ func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.buildLogger(); err != nil {
 		return fmt.Errorf("failed to build logger: %w", err)
 	}
-
-	cfgPath, err := o.GetConfigFilePath()
-	if err != nil {
-		return fmt.Errorf("failed to get config file path: %w", err)
-	}
-	cfg, err := NewOrLoadConfigFile(cfgPath)
-	if err != nil {
-		return fmt.Errorf("failed to load config file: %w", err)
-	}
-	o.CliConfig = cfg
-	o.DashboardURL, err = o.GetDashboardURL()
-	if err != nil {
-		return fmt.Errorf("failed to get dashboard URL: %w", err)
-	}
-
 	if o.UseKubeAPI && o.KosmoClient == nil {
 		if err := o.buildKosmoClient(); err != nil {
 			return fmt.Errorf("failed to kubernetes client: %w", err)
 		}
 	} else {
+		cfgPath, err := o.GetConfigFilePath()
+		if err != nil {
+			return fmt.Errorf("failed to get config file path: %w", err)
+		}
+		cfg, err := NewOrLoadConfigFile(cfgPath)
+		if err != nil {
+			return fmt.Errorf("failed to load config file: %w", err)
+		}
+		o.CliConfig = cfg
+		o.DashboardURL, err = o.GetDashboardURL()
+		if err != nil {
+			return fmt.Errorf("failed to get dashboard URL: %w", err)
+		}
+
 		if err := o.buildDashClient(); err != nil {
 			return fmt.Errorf("failed to COSMO Dashboard API client: %w", err)
 		}
@@ -208,6 +207,10 @@ func (o *RootOptions) buildKosmoClient() error {
 	o.KosmoClient = &baseclient
 
 	return nil
+}
+
+func (o *RootOptions) Logger() *clog.Logger {
+	return o.Logr
 }
 
 // GetCurrentWorkspaceName returns current workspace name.

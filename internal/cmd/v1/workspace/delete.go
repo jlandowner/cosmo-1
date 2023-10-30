@@ -23,7 +23,7 @@ type DeleteOption struct {
 
 func DeleteCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &DeleteOption{RootOptions: cliOpt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	return cmd
 }

@@ -31,7 +31,7 @@ type GetOption struct {
 
 func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
-	cmd.RunE = cmdutil.RunEHandler(o.RunE)
+	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'role' and 'addon' are available for now. e.g. 'role=x', 'addon=y'")
 	return cmd
 }
