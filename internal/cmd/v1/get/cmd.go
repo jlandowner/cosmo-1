@@ -28,18 +28,18 @@ Get cosmo resources
 	}, o))
 	getCmd.AddCommand(workspace.GetTemplatesCmd(&cobra.Command{
 		Use:     "workspace-template [TEMPLATE_NAME]",
-		Short:   "Get workspace templates. Alias of 'cosmoctl workspace get-template'",
-		Aliases: []string{"workspace-templates", "workspace-template", "ws-templates", "ws-template", "ws-tmpl", "ws-tmpls"},
+		Short:   "Get workspace templates",
+		Aliases: []string{"workspace-templates", "workspace-template", "ws-templates", "ws-template", "ws-tmpl", "ws-tmpls", "wstmpl", "wstmpls"},
 	}, o))
 	getCmd.AddCommand(user.GetAddonsCmd(&cobra.Command{
-		Use:     "useraddons [ADDON_NAME]",
+		Use:     "useraddon [ADDON_NAME]",
 		Short:   "Get user addons. Alias of 'cosmoctl user get-addons'",
 		Aliases: []string{"useraddon", "addon", "addons", "user-addon", "user-addons"},
 	}, o))
 	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
 		Use:     "workspace-network WORKSPACE_NAME",
-		Short:   "Get workspace networks. Alias of 'cosmoctl workspace get-network'",
-		Aliases: []string{"workspace-networks", "workspace-net", "ws-net"},
+		Short:   "Get workspace networks",
+		Aliases: []string{"workspace-networks", "workspace-net", "ws-net", "wsnet"},
 	}, o))
 	cmd.AddCommand(getCmd)
 }
