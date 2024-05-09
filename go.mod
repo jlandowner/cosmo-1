@@ -23,7 +23,7 @@ require (
 	github.com/sethvargo/go-password v0.3.0
 	github.com/spf13/afero v1.11.0
 	github.com/spf13/cobra v1.8.0
-	github.com/traefik/traefik/v2 v2.11.2
+	github.com/traefik/traefik/v3 v3.0.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.23.0
 	google.golang.org/protobuf v1.34.1
