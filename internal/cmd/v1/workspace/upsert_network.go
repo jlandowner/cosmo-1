@@ -59,7 +59,7 @@ func (o *UpsertNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 		o.WorkspaceName = cli.GetCurrentWorkspaceName()
 		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}
-	if o.UserName == "" {
+	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 

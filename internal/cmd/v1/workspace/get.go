@@ -48,7 +48,7 @@ func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		o.WorkspaceNames = args
 	}
-	if o.UserName == "" {
+	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 	if len(o.Filter) > 0 {
@@ -153,11 +153,11 @@ func (o *GetOption) Output(workspaces []*dashv1alpha1.Workspace) {
 	data := [][]string{}
 
 	for _, v := range workspaces {
-		data = append(data, []string{v.OwnerName, v.Name, v.Spec.Template, v.Status.Phase})
+		data = append(data, []string{v.OwnerName, v.Name, v.Spec.Template, v.Status.Phase, v.Status.MainUrl})
 	}
 
 	cli.OutputTable(o.Out,
-		[]string{"USER", "NAME", "TEMPLATE", "PHASE"},
+		[]string{"USER", "NAME", "TEMPLATE", "PHASE", "MAINURL"},
 		data)
 }
 

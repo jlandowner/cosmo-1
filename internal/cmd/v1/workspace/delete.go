@@ -44,7 +44,7 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 	}
 	o.WorkspaceNames = args
 
-	if o.UserName == "" {
+	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 	return nil

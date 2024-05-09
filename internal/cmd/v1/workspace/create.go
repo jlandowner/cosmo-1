@@ -50,7 +50,7 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 	}
 	o.WorkspaceName = args[0]
 
-	if o.UserName == "" {
+	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 
