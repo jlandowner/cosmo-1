@@ -72,7 +72,7 @@ func (o *resetPasswordOption) RunE(cmd *cobra.Command, args []string) error {
 	if !o.Force {
 	AskLoop:
 		for {
-			input, err := cli.AskInput("Confirm to reset password? [y/n] ", false)
+			input, err := cli.AskInput("Confirm? [y/n] ", false)
 			if err != nil {
 				return err
 			}

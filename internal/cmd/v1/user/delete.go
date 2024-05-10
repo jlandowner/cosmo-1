@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,11 +19,13 @@ type DeleteOption struct {
 	*cli.RootOptions
 
 	UserNames []string
+	Force     bool
 }
 
 func DeleteCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &DeleteOption{RootOptions: cliOpt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
+	cmd.Flags().BoolVar(&o.Force, "force", false, "not ask confirmation")
 	return cmd
 }
 
@@ -41,6 +44,9 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	o.UserNames = args
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -55,6 +61,23 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
+
+	if !o.Force {
+	AskLoop:
+		for {
+			input, err := cli.AskInput("Confirm? [y/n] ", false)
+			if err != nil {
+				return err
+			}
+			switch strings.ToLower(input) {
+			case "y":
+				break AskLoop
+			case "n":
+				fmt.Println("canceled")
+				return nil
+			}
+		}
+	}
 
 	for _, v := range o.UserNames {
 		if o.UseKubeAPI {
