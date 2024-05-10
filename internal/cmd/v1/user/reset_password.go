@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -16,13 +17,15 @@ import (
 type resetPasswordOption struct {
 	*changePasswordOption
 
-	Force bool
+	Force  bool
+	Silent bool
 }
 
 func resetPasswordCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &resetPasswordOption{changePasswordOption: &changePasswordOption{RootOptions: cliOpt}}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().BoolVar(&o.Force, "force", false, "not ask confirmation")
+	cmd.Flags().BoolVar(&o.Silent, "silent", false, "only output new password")
 	return cmd
 }
 
@@ -45,6 +48,8 @@ func (o *resetPasswordOption) Complete(cmd *cobra.Command, args []string) error 
 	}
 	o.UserName = args[0]
 
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -64,14 +69,34 @@ func (o *resetPasswordOption) RunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if !o.Force {
+	AskLoop:
+		for {
+			input, err := cli.AskInput("Confirm to reset password? [y/n] ", false)
+			if err != nil {
+				return err
+			}
+			switch strings.ToLower(input) {
+			case "y":
+				break AskLoop
+			case "n":
+				fmt.Println("canceled")
+				return nil
+			}
+		}
+	}
+
 	newPassword, err := o.resetPasswordWithKubeClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully reset password: user %s\n", o.UserName)
-
-	fmt.Fprintln(o.Out, "New password:", *newPassword)
+	if o.Silent {
+		fmt.Fprintln(o.Out, *newPassword)
+	} else {
+		cmdutil.PrintfColorInfo(o.Out, "Successfully reset password: user %s\n", o.UserName)
+		fmt.Fprintln(o.Out, "New password:", *newPassword)
+	}
 
 	return nil
 }

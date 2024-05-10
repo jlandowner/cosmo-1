@@ -24,7 +24,7 @@ Once you create User, Kubernetes Namespace is created and bound to the User.
 		Short: "Reset password",
 	}, o))
 	userCmd.AddCommand(changePasswordCmd(&cobra.Command{
-		Use:   "change-password USER_NAME",
+		Use:   "change-password [USER_NAME]",
 		Short: "Change password",
 	}, o))
 	userCmd.AddCommand(CreateCmd(&cobra.Command{
@@ -32,20 +32,16 @@ Once you create User, Kubernetes Namespace is created and bound to the User.
 		Short: "Create user",
 	}, o))
 	userCmd.AddCommand(GetCmd(&cobra.Command{
-		Use:     "get",
+		Use:     "get [USER_NAME...]",
 		Short:   "Get users",
 		Aliases: []string{"list"},
-		Long: `
-Get Users.
-`,
+		Long:    "Get Users",
 	}, o))
 	userCmd.AddCommand(GetAddonsCmd(&cobra.Command{
 		Use:     "get-addons",
-		Short:   "Get useraddon templates",
-		Aliases: []string{"get-addon", "get-addon-templates", "get-addon-tmpls"},
-		Long: `
-List useraddon templates in cluster.
-`,
+		Short:   "Get useraddons",
+		Aliases: []string{"get-addon", "get-addons", "addons"},
+		Long:    "List useraddons in cluster",
 	}, o))
 	userCmd.AddCommand(DeleteCmd(&cobra.Command{
 		Use:     "delete USER_NAME",

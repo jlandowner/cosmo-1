@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,14 +24,13 @@ type GetOption struct {
 	UserNames []string
 	Filter    []string
 
-	roleFilter  []string
-	addonFilter []string
+	filters []cli.Filter
 }
 
 func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
-	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'role' and 'addon' are available for now. e.g. 'role=x', 'addon=y'")
+	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'ROLE', 'ADDON', 'AUTHTYPE', 'PHASE']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter ROLE==*-dev --filter ROLE!=team-a'")
 	return cmd
 }
 
@@ -51,23 +49,14 @@ func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
 		o.UserNames = args
 	}
 	if len(o.Filter) > 0 {
-		for _, f := range o.Filter {
-			s := strings.Split(f, "=")
-			if len(s) != 2 {
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
-			switch s[0] {
-			case "addon":
-				o.addonFilter = append(o.addonFilter, s[1])
-			case "role":
-				o.roleFilter = append(o.roleFilter, s[1])
-			default:
-				o.Logr.Info("invalid filter expression", "filter", f)
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
-		}
+		o.filters = cli.ParseFilters(o.Filter)
 	}
-	o.Logr.Debug().Info("filter", "role", o.roleFilter, "addon", o.addonFilter)
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -145,36 +134,38 @@ func (o *GetOption) GetUserWithDashClient(ctx context.Context, userName string) 
 }
 
 func (o *GetOption) ApplyFilters(users []*dashv1alpha1.User) []*dashv1alpha1.User {
-	if len(o.roleFilter) > 0 {
-		// And loop
-		for _, selected := range o.roleFilter {
-			ts := make([]*dashv1alpha1.User, 0)
-			for _, t := range users {
-			RoleFilterLoop:
-				for _, v := range t.Roles {
-					if matched, err := filepath.Match(selected, v); err == nil && matched {
-						ts = append(ts, t)
-						break RoleFilterLoop
-					}
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("applying filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+
+		switch strings.ToUpper(f.Key) {
+		case "NAME":
+			users = cli.DoFilter(users, func(u *dashv1alpha1.User) []string {
+				return []string{u.Name}
+			}, f)
+		case "ROLE", "ROLES":
+			users = cli.DoFilter(users, func(u *dashv1alpha1.User) []string {
+				arr := make([]string, 0, len(u.Roles))
+				arr = append(arr, u.Roles...)
+				return arr
+			}, f)
+		case "ADDON", "ADDONS":
+			users = cli.DoFilter(users, func(u *dashv1alpha1.User) []string {
+				arr := make([]string, 0, len(u.Addons))
+				for _, a := range u.Addons {
+					arr = append(arr, a.Template)
 				}
-			}
-			users = ts
-		}
-	}
-	if len(o.addonFilter) > 0 {
-		// And loop
-		for _, selected := range o.addonFilter {
-			ts := make([]*dashv1alpha1.User, 0, len(o.UserNames))
-			for _, t := range users {
-			AddonsLoop:
-				for _, v := range t.Addons {
-					if matched, err := filepath.Match(selected, v.Template); err == nil && matched {
-						ts = append(ts, t)
-						break AddonsLoop
-					}
-				}
-			}
-			users = ts
+				return arr
+			}, f)
+		case "AUTHTYPE":
+			users = cli.DoFilter(users, func(u *dashv1alpha1.User) []string {
+				return []string{u.AuthType}
+			}, f)
+		case "PHASE":
+			users = cli.DoFilter(users, func(u *dashv1alpha1.User) []string {
+				return []string{u.Status}
+			}, f)
+		default:
+			o.Logr.Info("unknown filter key", "key", f.Key)
 		}
 	}
 
@@ -200,9 +191,8 @@ func (o *GetOption) Output(users []*dashv1alpha1.User) {
 
 	for _, v := range users {
 		role := make([]string, 0, len(v.Roles))
-		for _, v := range v.Roles {
-			role = append(role, v)
-		}
+		role = append(role, v.Roles...)
+
 		addons := make([]string, 0, len(v.Addons))
 		for _, v := range v.Addons {
 			addons = append(addons, v.Template)

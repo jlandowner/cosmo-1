@@ -37,9 +37,6 @@ func (o *changePasswordOption) Validate(cmd *cobra.Command, args []string) error
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
-	if len(args) < 1 {
-		return errors.New("invalid args")
-	}
 	return nil
 }
 
@@ -47,7 +44,13 @@ func (o *changePasswordOption) Complete(cmd *cobra.Command, args []string) error
 	if err := o.RootOptions.Complete(cmd, args); err != nil {
 		return err
 	}
-	o.UserName = args[0]
+	if len(args) > 0 {
+		o.UserName = args[0]
+	}
+	if o.UserName == "" {
+		o.UserName = o.CliConfig.User
+		o.Logr.Info(fmt.Sprintf("Change login user password: %s", o.UserName))
+	}
 
 	if o.PasswordStdin {
 		if !o.UseKubeAPI {
@@ -73,6 +76,8 @@ func (o *changePasswordOption) Complete(cmd *cobra.Command, args []string) error
 		o.newPassword = input
 	}
 
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -102,7 +107,7 @@ func (o *changePasswordOption) RunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully changed password: user %s\n", o.UserName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully changed password: %s\n", o.UserName)
 
 	return nil
 }
@@ -129,7 +134,7 @@ func (o *changePasswordOption) ValidateUser(ctx context.Context) error {
 
 func (o *changePasswordOption) getUserWithKubeClient(ctx context.Context, userName string) (*dashv1alpha1.User, error) {
 	c := o.KosmoClient
-	user, err := c.GetUser(ctx, o.UserName)
+	user, err := c.GetUser(ctx, userName)
 	if err != nil {
 		return nil, err
 	}
