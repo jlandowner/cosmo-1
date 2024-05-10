@@ -108,18 +108,16 @@ func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get config file path: %w", err)
 		}
+		o.Logr.Debug().Info("config file path", "path", cfgPath, "dir", filepath.Dir(cfgPath))
+
 		cfg, err := NewOrLoadConfigFile(cfgPath)
 		if err != nil {
 			return fmt.Errorf("failed to load config file: %w", err)
 		}
 		o.CliConfig = cfg
-		o.DashboardURL, err = o.GetDashboardURL()
-		if err != nil {
-			return fmt.Errorf("failed to get dashboard URL: %w", err)
-		}
 
 		if err := o.buildDashClient(); err != nil {
-			return fmt.Errorf("failed to COSMO Dashboard API client: %w", err)
+			return fmt.Errorf("failed to build COSMO Dashboard API client: %w", err)
 		}
 	}
 
@@ -154,24 +152,30 @@ func (o *RootOptions) GetConfigFilePath() (string, error) {
 	}
 }
 
-func (o *RootOptions) GetDashboardURL() (string, error) {
+func (o *RootOptions) GetDashboardURL() string {
 	if o.DashboardURL != "" {
-		return o.DashboardURL, nil
+		return o.DashboardURL
 	} else if envURL := os.Getenv(ENV_DASHBOARD_URL); envURL != "" {
-		return envURL, nil
+		return envURL
 	} else if o.CliConfig.Endpoint != "" {
-		return o.CliConfig.Endpoint, nil
+		return o.CliConfig.Endpoint
 	} else {
-		return "", fmt.Errorf("failed to recognize dashboard URL")
+		return ""
 	}
 }
 
 func (o *RootOptions) buildDashClient() error {
-	baseURL, err := url.Parse(o.DashboardURL)
+	dashURL := o.GetDashboardURL()
+	if dashURL == "" {
+		return fmt.Errorf("failed to get dashboard URL. login first or run with --dashboard-url option")
+	}
+	o.Logr.Debug().Info("Dashboard URL", "url", dashURL)
+
+	baseURL, err := url.Parse(dashURL)
 	if err != nil {
 		return err
 	}
-	o.Logr.Debug().Info("Dashboard URL", "url", baseURL.String())
+
 	o.CosmoDashClient = NewCosmoDashClient(http.DefaultClient, baseURL)
 	return nil
 }

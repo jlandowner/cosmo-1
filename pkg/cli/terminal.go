@@ -45,5 +45,5 @@ func AskInput(prompt string, silent bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read input : %w", err)
 	}
-	return string(input), nil
+	return strings.Trim(string(input), "\n"), nil
 }

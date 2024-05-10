@@ -14,10 +14,17 @@ import (
 
 func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	loginCmd := &cobra.Command{
-		Use:   "login USERID",
+		Use:   "login USER_NAME",
 		Short: "Login to COSMO Dashboard Server",
 		Long: `
 Login to COSMO Dashboard Server.
+`,
+		Example: `
+  # interactive mode
+  cosmoctl login
+
+  # non interactive mode
+  echo $PASSWORD | cosmoctl login USER_NAME --dashboard-url https://DASHBOARD_URL --password-stdin
 `,
 	}
 	cmd.AddCommand(LoginCmd(loginCmd, o))
@@ -39,6 +46,18 @@ func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 }
 
 func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
+	if o.UseKubeAPI {
+		return fmt.Errorf("login command does not support using Kubernetes API")
+	}
+	if o.PasswordStdin {
+		if o.DashboardURL == "" || o.UserName == "" {
+			return fmt.Errorf("dashboard URL and user name are required by args when using --password-stdin")
+		}
+		if o.Password != "" {
+			return fmt.Errorf("--password and --password-stdin are exclusive")
+		}
+	}
+
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
@@ -46,29 +65,28 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
-	if err := o.RootOptions.Complete(cmd, args); err != nil {
-		return err
-	}
-	if len(args) > 0 {
-		o.UserName = args[0]
-	}
-
+	// 1. Get Dashboard URL
 	if o.DashboardURL == "" {
-		input, err := cli.AskInput(fmt.Sprintf("Dasboard URL(%s): ", o.DashboardURL), false)
+		input, err := cli.AskInput("Dashboard URL: ", false)
 		if err != nil {
 			return err
 		}
 		o.DashboardURL = input
 	}
 
+	// 2. Get UserName
+	if len(args) > 0 {
+		o.UserName = args[0]
+	}
 	if o.UserName == "" {
-		input, err := cli.AskInput("UserName: ", false)
+		input, err := cli.AskInput("User Name: ", false)
 		if err != nil {
 			return err
 		}
 		o.UserName = input
 	}
 
+	// 3. Get Password
 	if o.PasswordStdin {
 		input, err := cli.ReadFromPipedStdin()
 		if err != nil {
@@ -82,6 +100,11 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		}
 		o.Password = input
 	}
+
+	if err := o.RootOptions.Complete(cmd, args); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -104,7 +127,7 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	}
 	o.CliConfig.Token = ses
 	o.CliConfig.User = o.UserName
-	o.CliConfig.Endpoint = o.DashboardURL
+	o.CliConfig.Endpoint = o.GetDashboardURL()
 
 	// save session
 	err = o.CliConfig.Save()
@@ -112,7 +135,7 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.DashboardURL, o.UserName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.CliConfig.Endpoint, o.CliConfig.User)
 
 	return nil
 

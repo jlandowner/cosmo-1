@@ -33,7 +33,7 @@ func NewOrLoadConfigFile(path string) (*Config, error) {
 
 	err = json.Unmarshal(f, &cfg)
 	if err != nil {
-		return &cfg, fmt.Errorf("failed to unmarshal JSON: %w", err)
+		return &cfg, fmt.Errorf("invalid config file: %w", err)
 	}
 
 	return &cfg, nil
@@ -45,9 +45,9 @@ func (c *Config) Save() error {
 		return fmt.Errorf("failed to marchal JSON: %w", err)
 	}
 
-	err = os.MkdirAll(filepath.Base(c.cfg), 0755)
+	err = os.MkdirAll(filepath.Dir(c.cfg), 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", filepath.Base(c.cfg), err)
+		return fmt.Errorf("failed to create directory %s: %w", filepath.Dir(c.cfg), err)
 	}
 
 	err = os.WriteFile(c.cfg, b, 0600)
