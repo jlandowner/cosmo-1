@@ -75,6 +75,8 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 		o.userAddons = append(o.userAddons, userAddons...)
 	}
 
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
