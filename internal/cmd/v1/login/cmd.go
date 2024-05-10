@@ -55,9 +55,6 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 		if o.DashboardURL == "" || o.UserName == "" {
 			return fmt.Errorf("dashboard URL and user name are required by args when using --password-stdin")
 		}
-		if o.Password != "" {
-			return fmt.Errorf("--password and --password-stdin are exclusive")
-		}
 	}
 
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
