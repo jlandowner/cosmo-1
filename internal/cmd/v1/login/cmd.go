@@ -36,12 +36,14 @@ type LoginOption struct {
 	UserName      string
 	Password      string
 	PasswordStdin bool
+	Again         bool
 }
 
 func LoginCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &LoginOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().BoolVar(&o.PasswordStdin, "password-stdin", false, "input new password from stdin pipe")
+	cmd.Flags().BoolVar(&o.Again, "again", false, "login again")
 	return cmd
 }
 
@@ -49,7 +51,7 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 	if o.UseKubeAPI {
 		return fmt.Errorf("login command does not support using Kubernetes API")
 	}
-	if o.PasswordStdin {
+	if !o.Again && o.PasswordStdin {
 		if o.DashboardURL == "" || o.UserName == "" {
 			return fmt.Errorf("dashboard URL and user name are required by args when using --password-stdin")
 		}
@@ -65,28 +67,57 @@ func (o *LoginOption) Validate(cmd *cobra.Command, args []string) error {
 }
 
 func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
-	// 1. Get Dashboard URL
-	if o.DashboardURL == "" {
-		input, err := cli.AskInput("Dashboard URL: ", false)
-		if err != nil {
-			return err
+	// check if config file already exists
+	cfgPath, _ := o.GetConfigFilePath()
+	previousLogin, _ := cli.NewOrLoadConfigFile(cfgPath)
+
+	if o.Again {
+		if previousLogin.Endpoint == "" {
+			return fmt.Errorf("failed to get previous login state. please login without --again")
 		}
-		o.DashboardURL = input
+		o.DashboardURL = previousLogin.Endpoint
+		o.UserName = previousLogin.User
+
+	} else {
+		// 1. Ask Dashboard URL
+		if o.DashboardURL == "" {
+			prompt := "Dashboard URL: "
+			if previousLogin.Endpoint != "" {
+				prompt = fmt.Sprintf("Dashboard URL (%s): ", previousLogin.Endpoint)
+			}
+			input, err := cli.AskInput(prompt, false)
+			if err != nil {
+				return err
+			}
+			if input == "" {
+				o.DashboardURL = previousLogin.Endpoint
+			} else {
+				o.DashboardURL = input
+			}
+		}
+
+		// 2. Ask UserName
+		if len(args) > 0 {
+			o.UserName = args[0]
+		}
+		if o.UserName == "" {
+			prompt := "User Name    : "
+			if previousLogin.User != "" {
+				prompt = fmt.Sprintf("User Name (%s): ", previousLogin.User)
+			}
+			input, err := cli.AskInput(prompt, false)
+			if err != nil {
+				return err
+			}
+			if input == "" {
+				o.UserName = previousLogin.User
+			} else {
+				o.UserName = input
+			}
+		}
 	}
 
-	// 2. Get UserName
-	if len(args) > 0 {
-		o.UserName = args[0]
-	}
-	if o.UserName == "" {
-		input, err := cli.AskInput("User Name    : ", false)
-		if err != nil {
-			return err
-		}
-		o.UserName = input
-	}
-
-	// 3. Get Password
+	// 3. Ask Password
 	if o.PasswordStdin {
 		input, err := cli.ReadFromPipedStdin()
 		if err != nil {
@@ -104,10 +135,18 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Complete(cmd, args); err != nil {
 		return err
 	}
+	o.Logr.Debug().Info("input", "dashboardURL", o.DashboardURL, "userName", o.UserName, "password", mask(o.Password))
 
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
 	return nil
+}
+
+func mask(s string) string {
+	if s == "" {
+		return ""
+	}
+	return "******"
 }
 
 func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
