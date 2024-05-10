@@ -79,7 +79,7 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		o.UserName = args[0]
 	}
 	if o.UserName == "" {
-		input, err := cli.AskInput("User Name: ", false)
+		input, err := cli.AskInput("User Name    : ", false)
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		}
 		o.Password = input
 	} else {
-		input, err := cli.AskInput("Password: ", true)
+		input, err := cli.AskInput("Password     : ", true)
 		if err != nil {
 			return err
 		}
@@ -105,6 +105,8 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 

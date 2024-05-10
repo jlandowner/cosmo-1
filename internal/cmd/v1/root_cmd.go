@@ -61,7 +61,7 @@ func Execute(v cli.VersionInfo) {
 	rootCmd := NewRootCmd(o)
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(o.Out, err)
+		fmt.Fprintf(o.Out, "Error: %s\n", err)
 		os.Exit(1)
 	}
 
