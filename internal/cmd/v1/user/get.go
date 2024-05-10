@@ -165,7 +165,7 @@ func (o *GetOption) ApplyFilters(users []*dashv1alpha1.User) []*dashv1alpha1.Use
 				return []string{u.Status}
 			}, f)
 		default:
-			o.Logr.Info("unknown filter key", "key", f.Key)
+			o.Logr.Info("WARNING: unknown filter key", "key", f.Key)
 		}
 	}
 
