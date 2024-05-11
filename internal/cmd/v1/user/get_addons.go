@@ -28,7 +28,7 @@ type GetAddonsOption struct {
 func GetAddonsCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetAddonsOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
-	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'USERROLE', 'REQUIRED_USERADDONS']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter USERROLE==*-dev --filter USERROLE!=team-a'")
+	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'USERROLE', 'REQUIRED_USERADDON']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter USERROLE==*-dev --filter USERROLE!=team-a'")
 	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
 	return cmd
 }
@@ -81,18 +81,17 @@ func (o *GetAddonsOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	var tmpls []*dashv1alpha1.Template
-	var err error
+	var (
+		tmpls []*dashv1alpha1.Template
+		err   error
+	)
 	if o.UseKubeAPI {
 		tmpls, err = o.ListUserAddonsByKubeClient(ctx, o.OutputFormat == "yaml")
-		if err != nil {
-			return err
-		}
 	} else {
 		tmpls, err = o.ListUserAddonsWithDashClient(ctx, o.OutputFormat == "yaml")
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 	o.Logr.Debug().Info("UserAddon templates", "templates", tmpls)
 
@@ -169,7 +168,7 @@ func (o *GetAddonsOption) OutputYAML(tmpls []*dashv1alpha1.Template) {
 	for i, t := range tmpls {
 		docs[i] = *t.Raw
 	}
-	fmt.Println(strings.Join(docs, "---\n"))
+	fmt.Fprintln(o.Out, strings.Join(docs, "---\n"))
 }
 
 func (o *GetAddonsOption) OutputTable(tmpls []*dashv1alpha1.Template) {
@@ -177,21 +176,30 @@ func (o *GetAddonsOption) OutputTable(tmpls []*dashv1alpha1.Template) {
 
 	for _, v := range tmpls {
 		rawRequiredAddons := strings.Join(v.RequiredUseraddons, ",")
-
 		rawUserroles := strings.Join(v.Userroles, ",")
 
 		var isDefaultUserAddon bool
 		if v.IsDefaultUserAddon != nil {
 			isDefaultUserAddon = *v.IsDefaultUserAddon
 		}
-
-		data = append(data, []string{v.GetName(), strconv.FormatBool(isDefaultUserAddon), rawUserroles, rawRequiredAddons})
-
+		data = append(data, []string{v.GetName(), strconv.FormatBool(isDefaultUserAddon), requiredVars(v.RequiredVars), rawUserroles, rawRequiredAddons})
 	}
 
 	cli.OutputTable(o.Out,
-		[]string{"NAME", "DEFAULT", "REQUIRED_USERROLES", "REQUIRED_USERADDONS"},
+		[]string{"NAME", "DEFAULT", "REQUIRED_VARS(default)", "USERROLE", "REQUIRED_USERADDON"},
 		data)
+}
+
+func requiredVars(vs []*dashv1alpha1.TemplateRequiredVars) string {
+	var s []string
+	for _, v := range vs {
+		data := v.VarName
+		if v.DefaultValue != "" {
+			data += fmt.Sprintf("(%s)", v.DefaultValue)
+		}
+		s = append(s, data)
+	}
+	return strings.Join(s, ",")
 }
 
 func (o *GetAddonsOption) ListUserAddonsByKubeClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Template, error) {

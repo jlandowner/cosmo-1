@@ -3,7 +3,7 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"io"
 	"strings"
 	"time"
 
@@ -22,21 +22,28 @@ type GetOption struct {
 	Filter         []string
 	UserName       string
 	AllUsers       bool
+	OutputFormat   string
 
-	tmplFilter []string
+	filters []cli.Filter
 }
 
 func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
-	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'template' is available for now. e.g. 'template=x'")
+	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'TEMPLATE', 'PHASE']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter TEMPLATE==dev-*'")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
 	return cmd
 }
 
 func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
+	}
+	switch o.OutputFormat {
+	case "table", "yaml":
+	default:
+		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
 	}
 	return nil
 }
@@ -52,21 +59,18 @@ func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
 		o.UserName = o.CliConfig.User
 	}
 	if len(o.Filter) > 0 {
-		for _, f := range o.Filter {
-			s := strings.Split(f, "=")
-			if len(s) != 2 {
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
-			switch s[0] {
-			case "template", "tmpl":
-				o.tmplFilter = append(o.tmplFilter, s[1])
-			default:
-				o.Logr.Info("invalid filter expression", "filter", f)
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
+		f, err := cli.ParseFilters(o.Filter)
+		if err != nil {
+			return err
 		}
+		o.filters = f
 	}
-	o.Logr.Debug().Info("filter", "tmpl", o.tmplFilter)
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -82,32 +86,35 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	var workspaces []*dashv1alpha1.Workspace
-	var err error
+	var (
+		workspaces []*dashv1alpha1.Workspace
+		err        error
+	)
 	if o.UseKubeAPI {
-		workspaces, err = o.ListWorkspacesByKubeClient(ctx)
-		if err != nil {
-			return err
-		}
+		workspaces, err = o.ListWorkspacesByKubeClient(ctx, o.OutputFormat == "yaml")
 	} else {
-		workspaces, err = o.ListWorkspacesWithDashClient(ctx)
-		if err != nil {
-			return err
-		}
+		workspaces, err = o.ListWorkspacesWithDashClient(ctx, o.OutputFormat == "yaml")
+	}
+	if err != nil {
+		return err
 	}
 	o.Logr.Debug().Info("Workspaces", "workspaces", workspaces)
 
 	workspaces = o.ApplyFilters(workspaces)
 
-	o.Output(workspaces)
-
-	return nil
-
+	if o.OutputFormat == "yaml" {
+		o.OutputYAML(workspaces)
+		return nil
+	} else {
+		OutputTable(o.Out, workspaces)
+		return nil
+	}
 }
 
-func (o *GetOption) ListWorkspacesWithDashClient(ctx context.Context) ([]*dashv1alpha1.Workspace, error) {
+func (o *GetOption) ListWorkspacesWithDashClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Workspace, error) {
 	req := &dashv1alpha1.GetWorkspacesRequest{
 		UserName: o.UserName,
+		WithRaw:  &withRaw,
 	}
 	c := o.CosmoDashClient
 	res, err := c.WorkspaceServiceClient.GetWorkspaces(ctx, cli.NewRequestWithToken(req, o.CliConfig))
@@ -119,16 +126,24 @@ func (o *GetOption) ListWorkspacesWithDashClient(ctx context.Context) ([]*dashv1
 }
 
 func (o *GetOption) ApplyFilters(workspaces []*dashv1alpha1.Workspace) []*dashv1alpha1.Workspace {
-	if len(o.tmplFilter) > 0 {
-		// And loop
-		for _, selected := range o.tmplFilter {
-			ts := make([]*dashv1alpha1.Workspace, 0)
-			for _, t := range workspaces {
-				if matched, err := filepath.Match(selected, t.Spec.Template); err == nil && matched {
-					ts = append(ts, t)
-				}
-			}
-			workspaces = ts
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("applying filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+
+		switch strings.ToUpper(f.Key) {
+		case "NAME":
+			workspaces = cli.DoFilter(workspaces, func(u *dashv1alpha1.Workspace) []string {
+				return []string{u.Name}
+			}, f)
+		case "TEMPLATE":
+			workspaces = cli.DoFilter(workspaces, func(u *dashv1alpha1.Workspace) []string {
+				return []string{u.Spec.Template}
+			}, f)
+		case "PHASE":
+			workspaces = cli.DoFilter(workspaces, func(u *dashv1alpha1.Workspace) []string {
+				return []string{u.Status.Phase}
+			}, f)
+		default:
+			o.Logr.Info("WARNING: unknown filter key", "key", f.Key)
 		}
 	}
 
@@ -149,23 +164,31 @@ func (o *GetOption) ApplyFilters(workspaces []*dashv1alpha1.Workspace) []*dashv1
 	return workspaces
 }
 
-func (o *GetOption) Output(workspaces []*dashv1alpha1.Workspace) {
+func (o *GetOption) OutputYAML(objs []*dashv1alpha1.Workspace) {
+	docs := make([]string, len(objs))
+	for i, t := range objs {
+		docs[i] = *t.Raw
+	}
+	fmt.Fprintln(o.Out, strings.Join(docs, "---\n"))
+}
+
+func OutputTable(out io.Writer, workspaces []*dashv1alpha1.Workspace) {
 	data := [][]string{}
 
 	for _, v := range workspaces {
 		data = append(data, []string{v.OwnerName, v.Name, v.Spec.Template, v.Status.Phase, v.Status.MainUrl})
 	}
 
-	cli.OutputTable(o.Out,
+	cli.OutputTable(out,
 		[]string{"USER", "NAME", "TEMPLATE", "PHASE", "MAINURL"},
 		data)
 }
 
-func (o *GetOption) ListWorkspacesByKubeClient(ctx context.Context) ([]*dashv1alpha1.Workspace, error) {
+func (o *GetOption) ListWorkspacesByKubeClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Workspace, error) {
 	c := o.KosmoClient
 	workspaces, err := c.ListWorkspacesByUserName(ctx, o.UserName)
 	if err != nil {
 		return nil, err
 	}
-	return apiconv.C2D_Workspaces(workspaces), nil
+	return apiconv.C2D_Workspaces(workspaces, apiconv.WithWorkspaceRaw(&withRaw)), nil
 }

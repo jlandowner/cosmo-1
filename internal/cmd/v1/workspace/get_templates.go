@@ -3,14 +3,11 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
+	"k8s.io/utils/ptr"
 
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
@@ -21,17 +18,17 @@ import (
 type GetTemplatesOption struct {
 	*cli.RootOptions
 	TemplateNames []string
+	Filter        []string
+	OutputFormat  string
 
-	Filter []string
-
-	roleFilter []string
-	showDetail bool
+	filters []cli.Filter
 }
 
 func GetTemplatesCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetTemplatesOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
-	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'userrole' is available for now. e.g. 'userrole=x'")
+	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'USERROLE', 'REQUIRED_USERADDON']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter USERROLE==*-dev --filter USERROLE!=team-a'")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
 	return cmd
 }
 
@@ -49,25 +46,20 @@ func (o *GetTemplatesOption) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		o.TemplateNames = args
 	}
-	if len(args) == 1 {
-		o.showDetail = true
-	}
+
 	if len(o.Filter) > 0 {
-		for _, f := range o.Filter {
-			s := strings.Split(f, "=")
-			if len(s) != 2 {
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
-			switch s[0] {
-			case "userrole":
-				o.roleFilter = append(o.roleFilter, s[1])
-			default:
-				o.Logr.Info("invalid filter expression", "filter", f)
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
+		f, err := cli.ParseFilters(o.Filter)
+		if err != nil {
+			return err
 		}
+		o.filters = f
 	}
-	o.Logr.Debug().Info("filter", "role", o.roleFilter)
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -83,41 +75,35 @@ func (o *GetTemplatesOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	var tmpls []*dashv1alpha1.Template
-	var err error
+	var (
+		tmpls []*dashv1alpha1.Template
+		err   error
+	)
 	if o.UseKubeAPI {
-		tmpls, err = o.ListWorkspaceTemplatesByKubeClient(ctx)
-		if err != nil {
-			return err
-		}
+		tmpls, err = o.ListWorkspaceTemplatesByKubeClient(ctx, o.OutputFormat == "yaml")
 	} else {
-		tmpls, err = o.ListWorkspaceTemplatesWithDashClient(ctx)
-		if err != nil {
-			return err
-		}
+		tmpls, err = o.ListWorkspaceTemplatesWithDashClient(ctx, o.OutputFormat == "yaml")
+	}
+	if err != nil {
+		return err
 	}
 	o.Logr.Debug().Info("WorkspaceTemplate templates", "templates", tmpls)
 
 	tmpls = o.ApplyFilters(tmpls)
 
-	if o.showDetail {
-		if len(tmpls) == 0 {
-			return fmt.Errorf("template not found")
-		} else {
-			o.OutputDetail(tmpls[0])
-			return nil
-		}
+	if o.OutputFormat == "yaml" {
+		o.OutputYAML(tmpls)
+		return nil
 	} else {
-		o.Output(tmpls)
+		o.OutputTable(tmpls)
+		return nil
 	}
-
-	return nil
-
 }
 
-func (o *GetTemplatesOption) ListWorkspaceTemplatesWithDashClient(ctx context.Context) ([]*dashv1alpha1.Template, error) {
+func (o *GetTemplatesOption) ListWorkspaceTemplatesWithDashClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Template, error) {
 	req := &dashv1alpha1.GetWorkspaceTemplatesRequest{
-		UseRoleFilter: pointer.Bool(false),
+		UseRoleFilter: ptr.To(false),
+		WithRaw:       &withRaw,
 	}
 	c := o.CosmoDashClient
 	res, err := c.TemplateServiceClient.GetWorkspaceTemplates(ctx, cli.NewRequestWithToken(req, o.CliConfig))
@@ -129,21 +115,28 @@ func (o *GetTemplatesOption) ListWorkspaceTemplatesWithDashClient(ctx context.Co
 }
 
 func (o *GetTemplatesOption) ApplyFilters(tmpls []*dashv1alpha1.Template) []*dashv1alpha1.Template {
-	// filter userroles
-	if len(o.roleFilter) > 0 {
-		// And loop
-		for _, selected := range o.roleFilter {
-			ts := make([]*dashv1alpha1.Template, 0)
-			for _, t := range tmpls {
-			RoleFilterLoop:
-				for _, v := range t.Userroles {
-					if matched, err := filepath.Match(selected, v); err == nil && matched {
-						ts = append(ts, t)
-						break RoleFilterLoop
-					}
-				}
-			}
-			tmpls = ts
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("applying filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+
+		switch strings.ToUpper(f.Key) {
+		case "NAME":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				return []string{u.Name}
+			}, f)
+		case "USERROLE", "USERROLES", "REQUIRED_USERROLES":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				arr := make([]string, 0, len(u.Userroles))
+				arr = append(arr, u.Userroles...)
+				return arr
+			}, f)
+		case "REQUIRED_USERADDONS":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				arr := make([]string, 0, len(u.RequiredUseraddons))
+				arr = append(arr, u.RequiredUseraddons...)
+				return arr
+			}, f)
+		default:
+			o.Logr.Info("WARNING: unknown filter key", "key", f.Key)
 		}
 	}
 
@@ -164,42 +157,43 @@ func (o *GetTemplatesOption) ApplyFilters(tmpls []*dashv1alpha1.Template) []*das
 	return tmpls
 }
 
-func (o *GetTemplatesOption) Output(tmpls []*dashv1alpha1.Template) {
-	data := [][]string{}
+func (o *GetTemplatesOption) OutputYAML(tmpls []*dashv1alpha1.Template) {
+	docs := make([]string, len(tmpls))
+	for i, t := range tmpls {
+		docs[i] = *t.Raw
+	}
+	fmt.Fprintln(o.Out, strings.Join(docs, "---\n"))
+}
 
+func (o *GetTemplatesOption) OutputTable(tmpls []*dashv1alpha1.Template) {
+	data := [][]string{}
 	for _, v := range tmpls {
 		rawRequiredUseraddons := strings.Join(v.RequiredUseraddons, ",")
-
 		rawUserroles := strings.Join(v.Userroles, ",")
-
-		var isDefaultUserAddon bool
-		if v.IsDefaultUserAddon != nil {
-			isDefaultUserAddon = *v.IsDefaultUserAddon
-		}
-
-		data = append(data, []string{v.GetName(), strconv.FormatBool(isDefaultUserAddon), rawUserroles, rawRequiredUseraddons})
-
+		data = append(data, []string{v.GetName(), requiredVars(v.RequiredVars), rawUserroles, rawRequiredUseraddons})
 	}
-
 	cli.OutputTable(o.Out,
-		[]string{"NAME", "DEFAULT", "REQUIRED_USERROLES", "REQUIRED_USERADDONS"},
+		[]string{"NAME", "REQUIRED_VARS(default)", "USERROLE", "REQUIRED_USERADDON"},
 		data)
 }
 
-func (o *GetTemplatesOption) OutputDetail(tmpl *dashv1alpha1.Template) {
-	b, err := yaml.Marshal(tmpl)
-	if err != nil {
-		fmt.Printf("failed to marshal template: %v\n", err)
-		return
+func requiredVars(vs []*dashv1alpha1.TemplateRequiredVars) string {
+	var s []string
+	for _, v := range vs {
+		data := v.VarName
+		if v.DefaultValue != "" {
+			data += fmt.Sprintf("(%s)", v.DefaultValue)
+		}
+		s = append(s, data)
 	}
-	fmt.Println(string(b))
+	return strings.Join(s, ",")
 }
 
-func (o *GetTemplatesOption) ListWorkspaceTemplatesByKubeClient(ctx context.Context) ([]*dashv1alpha1.Template, error) {
+func (o *GetTemplatesOption) ListWorkspaceTemplatesByKubeClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Template, error) {
 	c := o.KosmoClient
 	tmpls, err := c.ListWorkspaceTemplates(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return apiconv.C2D_Templates(tmpls), nil
+	return apiconv.C2D_Templates(tmpls, apiconv.WithTemplateRaw(&withRaw)), nil
 }

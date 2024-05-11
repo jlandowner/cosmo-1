@@ -210,7 +210,7 @@ func (o *GetOption) OutputYAML(objs []*dashv1alpha1.User) {
 	for i, t := range objs {
 		docs[i] = *t.Raw
 	}
-	fmt.Println(strings.Join(docs, "---\n"))
+	fmt.Fprintln(o.Out, strings.Join(docs, "---\n"))
 }
 
 func OutputTable(out io.Writer, users []*dashv1alpha1.User) {
