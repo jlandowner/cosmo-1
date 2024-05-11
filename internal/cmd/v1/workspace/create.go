@@ -44,6 +44,9 @@ func (o *CreateOption) Validate(cmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
 		return errors.New("invalid args")
 	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
+	}
 	return nil
 }
 
@@ -53,7 +56,7 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 	}
 	o.WorkspaceName = args[0]
 
-	if !o.UseKubeAPI && o.UserName == "" {
+	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 

@@ -31,6 +31,9 @@ func (o *GetEventsOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
+	if o.UseKubeAPI && len(args) < 1 {
+		return fmt.Errorf("user name is required")
+	}
 	return nil
 }
 

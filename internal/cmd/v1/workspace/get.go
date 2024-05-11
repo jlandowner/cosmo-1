@@ -40,10 +40,16 @@ func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
+	}
 	switch o.OutputFormat {
 	case "table", "yaml":
 	default:
 		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
+	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
 	}
 	return nil
 }
@@ -55,7 +61,7 @@ func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		o.WorkspaceNames = args
 	}
-	if !o.UseKubeAPI && o.UserName == "" {
+	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 	if len(o.Filter) > 0 {
