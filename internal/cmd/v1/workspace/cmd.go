@@ -19,54 +19,48 @@ Manipulate COSMO Workspace resource.
 	}
 
 	workspaceCmd.AddCommand(CreateCmd(&cobra.Command{
-		Use:   "create WORKSPACE_NAME",
+		Use:   "create WORKSPACE_NAME --template TEMPLATE_NAME",
 		Short: "Create workspace",
 	}, o))
 	workspaceCmd.AddCommand(GetCmd(&cobra.Command{
-		Use:     "get",
+		Use:     "get [WORKSPACE_NAME...]",
 		Short:   "Get workspaces",
 		Aliases: []string{"list"},
-		Long: `
-Get Workspaces.
-`,
 	}, o))
 	workspaceCmd.AddCommand(GetTemplatesCmd(&cobra.Command{
-		Use:     "get-templates",
-		Short:   "Get workspace templates",
-		Aliases: []string{"get-tmpls", "get-tmpl", "get-templates", "get-template"},
-		Long: `
-List workspaceaddon templates in cluster.
-`,
+		Use:     "templates [TEMPLATE_NAME...]",
+		Short:   "Get workspace templates in cluster",
+		Aliases: []string{"template", "tmpls", "tmpl", "get-templates", "get-template", "get-tmpls", "get-tmpl"},
 	}, o))
 	workspaceCmd.AddCommand(DeleteCmd(&cobra.Command{
-		Use:     "delete WORKSPACE_NAME",
+		Use:     "delete WORKSPACE_NAME...",
+		Short:   "Delete workspaces",
 		Aliases: []string{"rm"},
-		Short:   "Delete workspace",
 	}, o))
 	workspaceCmd.AddCommand(ResumeCmd(&cobra.Command{
-		Use:     "resume",
-		Short:   "Resume stopped workspaces",
+		Use:     "resume WORKSPACE_NAME",
+		Short:   "Resume stopped workspace pod",
 		Aliases: []string{"start", "run"},
 	}, o))
 	workspaceCmd.AddCommand(SuspendCmd(&cobra.Command{
-		Use:     "suspend",
-		Short:   "Suspend workspaces",
+		Use:     "suspend WORKSPACE_NAME",
+		Short:   "Suspend workspace pod",
 		Aliases: []string{"stop"},
 	}, o))
 	workspaceCmd.AddCommand(GetNetworkCmd(&cobra.Command{
-		Use:     "get-network WORKSPACE_NAME",
+		Use:     "network WORKSPACE_NAME",
 		Short:   "Get workspace network",
-		Aliases: []string{"get-ns", "ns", "network", "get-networks"},
+		Aliases: []string{"net", "get-network", "get-networks", "get-net"},
 	}, o))
 	workspaceCmd.AddCommand(UpsertNetworkCmd(&cobra.Command{
 		Use:     "upsert-network WORKSPACE_NAME --port 8080",
 		Short:   "Upsert workspace network",
-		Aliases: []string{"upsert-ns", "add-ns", "add-network"},
+		Aliases: []string{"add-net"},
 	}, o))
 	workspaceCmd.AddCommand(RemoveNetworkCmd(&cobra.Command{
 		Use:     "remove-network WORKSPACE_NAME --port 8080",
 		Short:   "Remove workspace network",
-		Aliases: []string{"remove-ns", "delete-ns", "delete-network"},
+		Aliases: []string{"rm-net", "delete-net", "delete-network"},
 	}, o))
 
 	cmd.AddCommand(workspaceCmd)

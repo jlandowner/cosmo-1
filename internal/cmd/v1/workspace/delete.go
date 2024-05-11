@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -19,12 +20,14 @@ type DeleteOption struct {
 
 	WorkspaceNames []string
 	UserName       string
+	Force          bool
 }
 
 func DeleteCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	o := &DeleteOption{RootOptions: cliOpt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
+	cmd.Flags().BoolVar(&o.Force, "force", false, "not ask confirmation")
 	return cmd
 }
 
@@ -47,6 +50,9 @@ func (o *DeleteOption) Complete(cmd *cobra.Command, args []string) error {
 	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -61,6 +67,25 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(o.Ctx, time.Second*10)
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
+
+	o.Logr.Info("deleting workspaces", "workspaces", o.WorkspaceNames)
+
+	if !o.Force {
+	AskLoop:
+		for {
+			input, err := cli.AskInput("Confirm? [y/n] ", false)
+			if err != nil {
+				return err
+			}
+			switch strings.ToLower(input) {
+			case "y":
+				break AskLoop
+			case "n":
+				fmt.Println("canceled")
+				return nil
+			}
+		}
+	}
 
 	for _, v := range o.WorkspaceNames {
 		if o.UseKubeAPI {

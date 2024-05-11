@@ -7,8 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
@@ -53,6 +52,9 @@ func (o *SuspendOption) Complete(cmd *cobra.Command, args []string) error {
 	if !o.UseKubeAPI && o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -88,7 +90,7 @@ func (o *SuspendOption) SuspendWorkspaceWithDashClient(ctx context.Context, work
 	req := &dashv1alpha1.UpdateWorkspaceRequest{
 		UserName: o.UserName,
 		WsName:   workspaceName,
-		Replicas: pointer.Int64(0),
+		Replicas: ptr.To(int64(0)),
 	}
 	c := o.CosmoDashClient
 	res, err := c.WorkspaceServiceClient.UpdateWorkspace(ctx, cli.NewRequestWithToken(req, o.CliConfig))
@@ -102,7 +104,7 @@ func (o *SuspendOption) SuspendWorkspaceWithDashClient(ctx context.Context, work
 
 func (o *SuspendOption) SuspendWorkspaceWithKubeClient(ctx context.Context, workspaceName string) error {
 	c := o.KosmoClient
-	if _, err := c.UpdateWorkspace(ctx, workspaceName, o.UserName, kosmo.UpdateWorkspaceOpts{Replicas: pointer.Int64(0)}); err != nil {
+	if _, err := c.UpdateWorkspace(ctx, workspaceName, o.UserName, kosmo.UpdateWorkspaceOpts{Replicas: ptr.To(int64(0))}); err != nil {
 		return err
 	}
 	return nil
