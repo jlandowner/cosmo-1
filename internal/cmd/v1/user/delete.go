@@ -62,6 +62,8 @@ func (o *DeleteOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
+	o.Logr.Info("deleting user", "userName", o.UserNames)
+
 	if !o.Force {
 	AskLoop:
 		for {

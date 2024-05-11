@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
 	connect_go "github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
@@ -21,8 +21,9 @@ import (
 type GetOption struct {
 	*cli.RootOptions
 
-	UserNames []string
-	Filter    []string
+	UserNames    []string
+	Filter       []string
+	OutputFormat string
 
 	filters []cli.Filter
 }
@@ -31,12 +32,18 @@ func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'ROLE', 'ADDON', 'AUTHTYPE', 'PHASE']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter ROLE==*-dev --filter ROLE!=team-a'")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
 	return cmd
 }
 
 func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
+	}
+	switch o.OutputFormat {
+	case "table", "yaml":
+	default:
+		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
 	}
 	return nil
 }
@@ -49,7 +56,11 @@ func (o *GetOption) Complete(cmd *cobra.Command, args []string) error {
 		o.UserNames = args
 	}
 	if len(o.Filter) > 0 {
-		o.filters = cli.ParseFilters(o.Filter)
+		f, err := cli.ParseFilters(o.Filter)
+		if err != nil {
+			return err
+		}
+		o.filters = f
 	}
 	for _, f := range o.filters {
 		o.Logr.Debug().Info("filter", "key", f.Key, "value", f.Value, "op", f.Operator)
@@ -75,12 +86,12 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 	var users []*dashv1alpha1.User
 	var err error
 	if o.UseKubeAPI {
-		users, err = o.ListUsersByKubeClient(ctx)
+		users, err = o.ListUsersByKubeClient(ctx, o.OutputFormat == "yaml")
 		if err != nil {
 			return err
 		}
 	} else {
-		users, err = o.ListUsersWithDashClient(ctx)
+		users, err = o.ListUsersWithDashClient(ctx, o.OutputFormat == "yaml")
 		if err != nil {
 			if connect_go.CodeOf(err) == connect_go.CodePermissionDenied {
 
@@ -93,7 +104,7 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 						}
 					}
 				}
-				me, err := o.GetUserWithDashClient(ctx, o.CliConfig.User)
+				me, err := o.GetUserWithDashClient(ctx, o.CliConfig.User, o.OutputFormat == "yaml")
 				if err != nil {
 					return err
 				}
@@ -107,15 +118,20 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 
 	users = o.ApplyFilters(users)
 
-	o.Output(users)
-
-	return nil
-
+	if o.OutputFormat == "yaml" {
+		o.OutputYAML(users)
+		return nil
+	} else {
+		OutputTable(o.Out, users)
+		return nil
+	}
 }
 
-func (o *GetOption) ListUsersWithDashClient(ctx context.Context) ([]*dashv1alpha1.User, error) {
+func (o *GetOption) ListUsersWithDashClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.User, error) {
 	c := o.CosmoDashClient
-	res, err := c.UserServiceClient.GetUsers(ctx, cli.NewRequestWithToken(&emptypb.Empty{}, o.CliConfig))
+	res, err := c.UserServiceClient.GetUsers(ctx, cli.NewRequestWithToken(&dashv1alpha1.GetUsersRequest{
+		WithRaw: &withRaw,
+	}, o.CliConfig))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect dashboard server: %w", err)
 	}
@@ -123,9 +139,12 @@ func (o *GetOption) ListUsersWithDashClient(ctx context.Context) ([]*dashv1alpha
 	return res.Msg.Items, nil
 }
 
-func (o *GetOption) GetUserWithDashClient(ctx context.Context, userName string) (*dashv1alpha1.User, error) {
+func (o *GetOption) GetUserWithDashClient(ctx context.Context, userName string, withRaw bool) (*dashv1alpha1.User, error) {
 	c := o.CosmoDashClient
-	res, err := c.UserServiceClient.GetUser(ctx, cli.NewRequestWithToken(&dashv1alpha1.GetUserRequest{UserName: userName}, o.CliConfig))
+	res, err := c.UserServiceClient.GetUser(ctx, cli.NewRequestWithToken(&dashv1alpha1.GetUserRequest{
+		UserName: userName,
+		WithRaw:  &withRaw,
+	}, o.CliConfig))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect dashboard server: %w", err)
 	}
@@ -186,7 +205,15 @@ func (o *GetOption) ApplyFilters(users []*dashv1alpha1.User) []*dashv1alpha1.Use
 	return users
 }
 
-func (o *GetOption) Output(users []*dashv1alpha1.User) {
+func (o *GetOption) OutputYAML(objs []*dashv1alpha1.User) {
+	docs := make([]string, len(objs))
+	for i, t := range objs {
+		docs[i] = *t.Raw
+	}
+	fmt.Println(strings.Join(docs, "---\n"))
+}
+
+func OutputTable(out io.Writer, users []*dashv1alpha1.User) {
 	data := [][]string{}
 
 	for _, v := range users {
@@ -200,16 +227,16 @@ func (o *GetOption) Output(users []*dashv1alpha1.User) {
 		data = append(data, []string{v.Name, strings.Join(role, ","), v.AuthType, cosmov1alpha1.UserNamespace(v.Name), v.Status, strings.Join(addons, ",")})
 	}
 
-	cli.OutputTable(o.Out,
+	cli.OutputTable(out,
 		[]string{"NAME", "ROLES", "AUTHTYPE", "NAMESPACE", "PHASE", "ADDONS"},
 		data)
 }
 
-func (o *GetOption) ListUsersByKubeClient(ctx context.Context) ([]*dashv1alpha1.User, error) {
+func (o *GetOption) ListUsersByKubeClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.User, error) {
 	c := o.KosmoClient
 	users, err := c.ListUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return apiconv.C2D_Users(users), nil
+	return apiconv.C2D_Users(users, apiconv.WithUserRaw(&withRaw)), nil
 }

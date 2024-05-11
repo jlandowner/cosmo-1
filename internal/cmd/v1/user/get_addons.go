@@ -3,14 +3,12 @@ package user
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/yaml"
+	"k8s.io/utils/ptr"
 
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
@@ -20,24 +18,29 @@ import (
 
 type GetAddonsOption struct {
 	*cli.RootOptions
-	AddonNames []string
+	AddonNames   []string
+	Filter       []string
+	OutputFormat string
 
-	Filter []string
-
-	roleFilter []string
-	showDetail bool
+	filters []cli.Filter
 }
 
 func GetAddonsCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetAddonsOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
-	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. 'userrole' is available for now. e.g. 'userrole=x'")
+	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'USERROLE', 'REQUIRED_USERADDONS']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter USERROLE==*-dev --filter USERROLE!=team-a'")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
 	return cmd
 }
 
 func (o *GetAddonsOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
+	}
+	switch o.OutputFormat {
+	case "table", "yaml":
+	default:
+		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
 	}
 	return nil
 }
@@ -49,25 +52,20 @@ func (o *GetAddonsOption) Complete(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
 		o.AddonNames = args
 	}
-	if len(args) == 1 {
-		o.showDetail = true
-	}
+
 	if len(o.Filter) > 0 {
-		for _, f := range o.Filter {
-			s := strings.Split(f, "=")
-			if len(s) != 2 {
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
-			switch s[0] {
-			case "userrole":
-				o.roleFilter = append(o.roleFilter, s[1])
-			default:
-				o.Logr.Info("invalid filter expression", "filter", f)
-				return fmt.Errorf("invalid filter expression: %s", f)
-			}
+		f, err := cli.ParseFilters(o.Filter)
+		if err != nil {
+			return err
 		}
+		o.filters = f
 	}
-	o.Logr.Debug().Info("filter", "role", o.roleFilter)
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -86,12 +84,12 @@ func (o *GetAddonsOption) RunE(cmd *cobra.Command, args []string) error {
 	var tmpls []*dashv1alpha1.Template
 	var err error
 	if o.UseKubeAPI {
-		tmpls, err = o.ListUserAddonsByKubeClient(ctx)
+		tmpls, err = o.ListUserAddonsByKubeClient(ctx, o.OutputFormat == "yaml")
 		if err != nil {
 			return err
 		}
 	} else {
-		tmpls, err = o.ListUserAddonsWithDashClient(ctx)
+		tmpls, err = o.ListUserAddonsWithDashClient(ctx, o.OutputFormat == "yaml")
 		if err != nil {
 			return err
 		}
@@ -100,50 +98,52 @@ func (o *GetAddonsOption) RunE(cmd *cobra.Command, args []string) error {
 
 	tmpls = o.ApplyFilters(tmpls)
 
-	if o.showDetail {
-		if len(tmpls) == 0 {
-			return fmt.Errorf("template not found")
-		} else {
-			o.OutputDetail(tmpls[0])
-			return nil
-		}
+	if o.OutputFormat == "yaml" {
+		o.OutputYAML(tmpls)
+		return nil
 	} else {
-		o.Output(tmpls)
+		o.OutputTable(tmpls)
+		return nil
 	}
-
-	return nil
-
 }
 
-func (o *GetAddonsOption) ListUserAddonsWithDashClient(ctx context.Context) ([]*dashv1alpha1.Template, error) {
+func (o *GetAddonsOption) ListUserAddonsWithDashClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Template, error) {
 	req := &dashv1alpha1.GetUserAddonTemplatesRequest{
-		UseRoleFilter: pointer.Bool(false),
+		UseRoleFilter: ptr.To(false),
+		WithRaw:       ptr.To(withRaw),
 	}
 	c := o.CosmoDashClient
 	res, err := c.TemplateServiceClient.GetUserAddonTemplates(ctx, cli.NewRequestWithToken(req, o.CliConfig))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect dashboard server: %w", err)
 	}
-	o.Logr.DebugAll().Info("UserServiceClient.GetUsers", "res", res)
+	o.Logr.DebugAll().Info("TemplateServiceClient.GetUserAddonTemplates", "res", res)
 	return res.Msg.Items, nil
 }
 
 func (o *GetAddonsOption) ApplyFilters(tmpls []*dashv1alpha1.Template) []*dashv1alpha1.Template {
-	// filter userroles
-	if len(o.roleFilter) > 0 {
-		// And loop
-		for _, selected := range o.roleFilter {
-			ts := make([]*dashv1alpha1.Template, 0)
-			for _, t := range tmpls {
-			RoleFilterLoop:
-				for _, v := range t.Userroles {
-					if matched, err := filepath.Match(selected, v); err == nil && matched {
-						ts = append(ts, t)
-						break RoleFilterLoop
-					}
-				}
-			}
-			tmpls = ts
+	for _, f := range o.filters {
+		o.Logr.Debug().Info("applying filter", "key", f.Key, "value", f.Value, "op", f.Operator)
+
+		switch strings.ToUpper(f.Key) {
+		case "NAME":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				return []string{u.Name}
+			}, f)
+		case "USERROLE", "USERROLES", "REQUIRED_USERROLES":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				arr := make([]string, 0, len(u.Userroles))
+				arr = append(arr, u.Userroles...)
+				return arr
+			}, f)
+		case "REQUIRED_USERADDONS":
+			tmpls = cli.DoFilter(tmpls, func(u *dashv1alpha1.Template) []string {
+				arr := make([]string, 0, len(u.RequiredUseraddons))
+				arr = append(arr, u.RequiredUseraddons...)
+				return arr
+			}, f)
+		default:
+			o.Logr.Info("WARNING: unknown filter key", "key", f.Key)
 		}
 	}
 
@@ -164,7 +164,15 @@ func (o *GetAddonsOption) ApplyFilters(tmpls []*dashv1alpha1.Template) []*dashv1
 	return tmpls
 }
 
-func (o *GetAddonsOption) Output(tmpls []*dashv1alpha1.Template) {
+func (o *GetAddonsOption) OutputYAML(tmpls []*dashv1alpha1.Template) {
+	docs := make([]string, len(tmpls))
+	for i, t := range tmpls {
+		docs[i] = *t.Raw
+	}
+	fmt.Println(strings.Join(docs, "---\n"))
+}
+
+func (o *GetAddonsOption) OutputTable(tmpls []*dashv1alpha1.Template) {
 	data := [][]string{}
 
 	for _, v := range tmpls {
@@ -186,20 +194,11 @@ func (o *GetAddonsOption) Output(tmpls []*dashv1alpha1.Template) {
 		data)
 }
 
-func (o *GetAddonsOption) OutputDetail(tmpl *dashv1alpha1.Template) {
-	b, err := yaml.Marshal(tmpl)
-	if err != nil {
-		fmt.Printf("failed to marshal template: %v\n", err)
-		return
-	}
-	fmt.Println(string(b))
-}
-
-func (o *GetAddonsOption) ListUserAddonsByKubeClient(ctx context.Context) ([]*dashv1alpha1.Template, error) {
+func (o *GetAddonsOption) ListUserAddonsByKubeClient(ctx context.Context, withRaw bool) ([]*dashv1alpha1.Template, error) {
 	c := o.KosmoClient
 	tmpls, err := c.ListUserAddonTemplates(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return apiconv.C2D_Templates(tmpls), nil
+	return apiconv.C2D_Templates(tmpls, apiconv.WithTemplateRaw(&withRaw)), nil
 }

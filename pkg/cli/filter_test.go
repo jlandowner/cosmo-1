@@ -13,9 +13,10 @@ func Test_opBool(t *testing.T) {
 		op string
 	}
 	tests := []struct {
-		name string
-		args args
-		want bool
+		name    string
+		args    args
+		want    bool
+		wantErr bool
 	}{
 		{
 			name: "eq",
@@ -42,9 +43,10 @@ func TestParseFilters(t *testing.T) {
 		filterExpressions []string
 	}
 	tests := []struct {
-		name string
-		args args
-		want []Filter
+		name    string
+		args    args
+		want    []Filter
+		wantErr bool
 	}{
 		{
 			name: "eq",
@@ -69,11 +71,18 @@ func TestParseFilters(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "error",
+			args: args{
+				filterExpressions: []string{"key1==value1", "key2==value2", "key3=value3"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseFilters(tt.args.filterExpressions)
-			if !reflect.DeepEqual(got, tt.want) {
+			got, err := ParseFilters(tt.args.filterExpressions)
+			if !reflect.DeepEqual(got, tt.want) || (err != nil) != tt.wantErr {
 				t.Errorf("ParseFilters() = %v, want %v", got, tt.want)
 			}
 		})

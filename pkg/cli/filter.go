@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -25,7 +26,7 @@ func opBool(op string) bool {
 	panic("unknown operator: " + op)
 }
 
-func ParseFilters(filterExpressions []string) []Filter {
+func ParseFilters(filterExpressions []string) ([]Filter, error) {
 	filters := make([]Filter, 0, len(filterExpressions))
 	for _, e := range filterExpressions {
 		var f *Filter
@@ -33,12 +34,14 @@ func ParseFilters(filterExpressions []string) []Filter {
 			f = parseFilterExpression(e, OperatorNotEqual)
 		} else if strings.Contains(e, OperatorEqual) {
 			f = parseFilterExpression(e, OperatorEqual)
+		} else {
+			return nil, fmt.Errorf("invalid filter expression: %s", e)
 		}
 		if f != nil {
 			filters = append(filters, *f)
 		}
 	}
-	return filters
+	return filters, nil
 }
 
 func parseFilterExpression(exp, op string) *Filter {
