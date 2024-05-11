@@ -8,16 +8,13 @@ import (
 
 func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	suspendCmd := &cobra.Command{
-		Use:   "suspend",
-		Short: "Suspend workspaces",
-		Long: `
-Stop workspace pods.
-`,
+		Use:     "suspend",
+		Short:   "Suspend workspaces",
 		Aliases: []string{"stop"},
 	}
 
 	suspendCmd.AddCommand(workspace.SuspendCmd(&cobra.Command{
-		Use:     "workspace WORKSPACE_NAME",
+		Use:     "workspace WORKSPACE_NAME...",
 		Short:   "Suspend workspaces. Alias of 'cosmoctl workspace suspend'",
 		Aliases: []string{"ws", "workspaces"},
 	}, o))

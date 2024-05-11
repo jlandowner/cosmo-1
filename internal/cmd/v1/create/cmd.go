@@ -11,9 +11,6 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create cosmo resources",
-		Long: `
-Create cosmo resources
-`,
 	}
 
 	createCmd.AddCommand(user.CreateCmd(&cobra.Command{
@@ -29,9 +26,9 @@ Create cosmo resources
 	}, o))
 
 	createCmd.AddCommand(workspace.UpsertNetworkCmd(&cobra.Command{
-		Use:     "network WORKSPACE_NAME",
+		Use:     "network WORKSPACE_NAME --port 8080",
 		Short:   "Upsert workspace network. Alias of 'cosmoctl workspace upsert-network'",
-		Aliases: []string{"workspace-network", "workspace-networks", "ws-net", "wsnet"},
+		Aliases: []string{"net", "workspace-network", "workspace-networks", "ws-net", "wsnet"},
 	}, o))
 
 	cmd.AddCommand(createCmd)

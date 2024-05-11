@@ -8,16 +8,13 @@ import (
 
 func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	resumeCmd := &cobra.Command{
-		Use:   "resume",
-		Short: "Start stopped workspaces",
-		Long: `
-Start stopped workspace pod.
-`,
+		Use:     "resume",
+		Short:   "Start stopped workspaces",
 		Aliases: []string{"start", "run"},
 	}
 
 	resumeCmd.AddCommand(workspace.ResumeCmd(&cobra.Command{
-		Use:     "workspace WORKSPACE_NAME",
+		Use:     "workspace WORKSPACE_NAME...",
 		Short:   "Resume workspaces. Alias of 'cosmoctl workspace resume'",
 		Aliases: []string{"ws", "workspaces"},
 	}, o))

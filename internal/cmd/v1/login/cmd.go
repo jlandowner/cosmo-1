@@ -16,9 +16,6 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	loginCmd := &cobra.Command{
 		Use:   "login USER_NAME",
 		Short: "Login to COSMO Dashboard Server",
-		Long: `
-Login to COSMO Dashboard Server.
-`,
 		Example: `
   # interactive mode
   cosmoctl login

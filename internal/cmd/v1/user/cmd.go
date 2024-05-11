@@ -47,9 +47,9 @@ Once you create User, Kubernetes Namespace is created and bound to the User.
 		Aliases: []string{"get-events", "get-event", "events", "event"},
 	}, o))
 	userCmd.AddCommand(DeleteCmd(&cobra.Command{
-		Use:     "delete USER_NAME",
+		Use:     "delete USER_NAME...",
 		Aliases: []string{"rm"},
-		Short:   "Delete user",
+		Short:   "Delete users",
 	}, o))
 
 	cmd.AddCommand(userCmd)

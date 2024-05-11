@@ -12,25 +12,22 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 		Use:     "delete",
 		Short:   "Delete cosmo resources",
 		Aliases: []string{"rm", "remove"},
-		Long: `
-Delete cosmo resources
-`,
 	}
 
 	deleteCmd.AddCommand(user.DeleteCmd(&cobra.Command{
-		Use:     "user USER_NAME",
-		Short:   "Delete user. Alias of 'cosmoctl user delete'",
+		Use:     "user USER_NAME...",
+		Short:   "Delete users. Alias of 'cosmoctl user delete'",
 		Aliases: []string{"us", "users"},
 	}, o))
 	deleteCmd.AddCommand(workspace.DeleteCmd(&cobra.Command{
-		Use:     "workspace WORKSPACE_NAME",
-		Short:   "Delete workspace. Alias of 'cosmoctl workspace delete'",
+		Use:     "workspace WORKSPACE_NAME...",
+		Short:   "Delete workspaces. Alias of 'cosmoctl workspace delete'",
 		Aliases: []string{"ws", "workspaces"},
 	}, o))
 	deleteCmd.AddCommand(workspace.RemoveNetworkCmd(&cobra.Command{
-		Use:     "network WORKSPACE_NAME",
+		Use:     "network WORKSPACE_NAME --port 8080",
 		Short:   "Remove workspace network. Alias of 'cosmoctl workspace remove-network'",
-		Aliases: []string{"workspace-network", "workspace-networks", "ws-net", "wsnet"},
+		Aliases: []string{"net", "workspace-network", "workspace-networks", "ws-net", "wsnet"},
 	}, o))
 	cmd.AddCommand(deleteCmd)
 }
