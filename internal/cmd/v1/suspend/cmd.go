@@ -11,7 +11,7 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 		Use:   "suspend",
 		Short: "Suspend workspaces",
 		Long: `
-Stopped workspace pods.
+Stop workspace pods.
 `,
 		Aliases: []string{"stop"},
 	}

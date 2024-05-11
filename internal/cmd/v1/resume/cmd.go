@@ -11,7 +11,7 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 		Use:   "resume",
 		Short: "Start stopped workspaces",
 		Long: `
-Start stopped workspaces.
+Start stopped workspace pod.
 `,
 		Aliases: []string{"start", "run"},
 	}

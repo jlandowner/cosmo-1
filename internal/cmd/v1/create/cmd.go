@@ -29,9 +29,9 @@ Create cosmo resources
 	}, o))
 
 	createCmd.AddCommand(workspace.UpsertNetworkCmd(&cobra.Command{
-		Use:     "workspace-network WORKSPACE_NAME",
+		Use:     "network WORKSPACE_NAME",
 		Short:   "Upsert workspace network. Alias of 'cosmoctl workspace upsert-network'",
-		Aliases: []string{"workspace-net", "ws-net"},
+		Aliases: []string{"workspace-network", "workspace-networks", "ws-net", "wsnet"},
 	}, o))
 
 	cmd.AddCommand(createCmd)
