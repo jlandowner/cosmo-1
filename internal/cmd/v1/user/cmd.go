@@ -35,13 +35,16 @@ Once you create User, Kubernetes Namespace is created and bound to the User.
 		Use:     "get [USER_NAME...]",
 		Short:   "Get users",
 		Aliases: []string{"list"},
-		Long:    "Get Users",
 	}, o))
 	userCmd.AddCommand(GetAddonsCmd(&cobra.Command{
-		Use:     "get-addons",
-		Short:   "Get useraddons",
-		Aliases: []string{"get-addon", "get-addons", "addons"},
-		Long:    "List useraddons in cluster",
+		Use:     "get-addons [ADDON_NAME...]",
+		Short:   "Get addons",
+		Aliases: []string{"get-addon", "get-addons", "addons", "addon"},
+	}, o))
+	userCmd.AddCommand(GetEventsCmd(&cobra.Command{
+		Use:     "get-events [USER_NAME]",
+		Short:   "Get events for user",
+		Aliases: []string{"get-events", "get-event", "events", "event"},
 	}, o))
 	userCmd.AddCommand(DeleteCmd(&cobra.Command{
 		Use:     "delete USER_NAME",

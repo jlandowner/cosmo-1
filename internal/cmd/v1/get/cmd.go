@@ -27,9 +27,9 @@ Get cosmo resources
 		Aliases: []string{"workspaces", "ws"},
 	}, o))
 	getCmd.AddCommand(workspace.GetTemplatesCmd(&cobra.Command{
-		Use:     "workspace-template [TEMPLATE_NAME]",
+		Use:     "template [TEMPLATE_NAME]",
 		Short:   "Get workspace templates",
-		Aliases: []string{"workspace-templates", "workspace-template", "ws-templates", "ws-template", "ws-tmpl", "ws-tmpls", "wstmpl", "wstmpls"},
+		Aliases: []string{"templates", "tmpl", "tmpls", "ws-tmpl", "ws-tmpls", "wstmpl", "wstmpls"},
 	}, o))
 	getCmd.AddCommand(user.GetAddonsCmd(&cobra.Command{
 		Use:     "useraddon [ADDON_NAME]",
@@ -37,9 +37,14 @@ Get cosmo resources
 		Aliases: []string{"useraddon", "addon", "addons", "user-addon", "user-addons"},
 	}, o))
 	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
-		Use:     "workspace-network WORKSPACE_NAME",
+		Use:     "network WORKSPACE_NAME",
 		Short:   "Get workspace networks",
-		Aliases: []string{"workspace-networks", "workspace-net", "ws-net", "wsnet"},
+		Aliases: []string{"workspace-network", "workspace-networks", "ws-net", "wsnet"},
+	}, o))
+	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
+		Use:     "events [USER_NAME]",
+		Short:   "Get events for user",
+		Aliases: []string{"event"},
 	}, o))
 	cmd.AddCommand(getCmd)
 }
