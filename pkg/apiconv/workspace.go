@@ -7,21 +7,31 @@ import (
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
-func C2D_Workspaces(wss []cosmov1alpha1.Workspace) []*dashv1alpha1.Workspace {
+type WorkspaceConvertOptions func(c *cosmov1alpha1.Workspace, d *dashv1alpha1.Workspace)
+
+func WithWorkspaceRaw(withRaw *bool) func(c *cosmov1alpha1.Workspace, d *dashv1alpha1.Workspace) {
+	return func(c *cosmov1alpha1.Workspace, d *dashv1alpha1.Workspace) {
+		if withRaw != nil && *withRaw {
+			d.Raw = ToYAML(c)
+		}
+	}
+}
+
+func C2D_Workspaces(wss []cosmov1alpha1.Workspace, opts ...WorkspaceConvertOptions) []*dashv1alpha1.Workspace {
 	apiwss := make([]*dashv1alpha1.Workspace, len(wss))
 	for i, v := range wss {
-		apiwss[i] = C2D_Workspace(v)
+		apiwss[i] = C2D_Workspace(v, opts...)
 	}
 	return apiwss
 }
 
-func C2D_Workspace(ws cosmov1alpha1.Workspace) *dashv1alpha1.Workspace {
+func C2D_Workspace(ws cosmov1alpha1.Workspace, opts ...WorkspaceConvertOptions) *dashv1alpha1.Workspace {
 	replicas := ws.Spec.Replicas
 	if replicas == nil {
 		replicas = ptr.To(int64(1))
 	}
 
-	return &dashv1alpha1.Workspace{
+	d := &dashv1alpha1.Workspace{
 		Name:      ws.Name,
 		OwnerName: cosmov1alpha1.UserNameByNamespace(ws.Namespace),
 		Spec: &dashv1alpha1.WorkspaceSpec{
@@ -35,6 +45,10 @@ func C2D_Workspace(ws cosmov1alpha1.Workspace) *dashv1alpha1.Workspace {
 			MainUrl: ws.Status.URLs[cosmov1alpha1.MainRuleKey(ws.Status.Config)],
 		},
 	}
+	for _, opt := range opts {
+		opt(&ws, d)
+	}
+	return d
 }
 
 func C2D_NetworkRules(netRules []cosmov1alpha1.NetworkRule, urlMap map[string]string) []*dashv1alpha1.NetworkRule {

@@ -36,7 +36,7 @@ func (s *Server) GetWorkspaceTemplates(ctx context.Context, req *connect_go.Requ
 	}
 
 	res := &dashv1alpha1.GetWorkspaceTemplatesResponse{
-		Items: apiconv.C2D_Templates(tmpls),
+		Items: apiconv.C2D_Templates(tmpls, apiconv.WithTemplateRaw(req.Msg.WithRaw)),
 	}
 
 	if len(res.Items) == 0 {
@@ -61,7 +61,7 @@ func (s *Server) GetUserAddonTemplates(ctx context.Context, req *connect_go.Requ
 	}
 
 	res := &dashv1alpha1.GetUserAddonTemplatesResponse{
-		Items: apiconv.C2D_Templates(tmpls),
+		Items: apiconv.C2D_Templates(tmpls, apiconv.WithTemplateRaw(req.Msg.WithRaw)),
 	}
 
 	if len(res.Items) == 0 {

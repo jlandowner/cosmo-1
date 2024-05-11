@@ -26,4 +26,6 @@ message Template {
   repeated string required_useraddons = 6;
 
   repeated string userroles = 7;
+  
+  optional string raw = 8;
 }

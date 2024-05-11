@@ -57,7 +57,7 @@ func (s *Server) GetWorkspaces(ctx context.Context, req *connect_go.Request[dash
 	}
 
 	res := &dashv1alpha1.GetWorkspacesResponse{
-		Items: apiconv.C2D_Workspaces(wss),
+		Items: apiconv.C2D_Workspaces(wss, apiconv.WithWorkspaceRaw(req.Msg.WithRaw)),
 	}
 	if len(res.Items) == 0 {
 		res.Message = "No items found"
@@ -79,8 +79,9 @@ func (s *Server) GetWorkspace(ctx context.Context, req *connect_go.Request[dashv
 	}
 
 	res := &dashv1alpha1.GetWorkspaceResponse{
-		Workspace: apiconv.C2D_Workspace(*ws),
+		Workspace: apiconv.C2D_Workspace(*ws, apiconv.WithWorkspaceRaw(req.Msg.WithRaw)),
 	}
+
 	return connect_go.NewResponse(res), nil
 }
 

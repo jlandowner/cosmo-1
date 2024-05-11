@@ -92,15 +92,21 @@ func (c *Client) ListUserAddonTemplates(ctx context.Context) ([]cosmov1alpha1.Te
 	}
 }
 
-func (c *Client) GetTemplate(ctx context.Context, tmplName string) (*cosmov1alpha1.Template, error) {
+func (c *Client) GetTemplateObject(ctx context.Context, tmplName string) (cosmov1alpha1.TemplateObject, error) {
 	tmpl := cosmov1alpha1.Template{}
 
-	key := types.NamespacedName{
-		Name: tmplName,
-	}
-
+	key := types.NamespacedName{Name: tmplName}
 	if err := c.Get(ctx, key, &tmpl); err != nil {
-		return nil, err
+		if apierrs.IsNotFound(err) {
+
+			tmpl := cosmov1alpha1.ClusterTemplate{}
+			key := types.NamespacedName{Name: tmplName}
+			if err := c.Get(ctx, key, &tmpl); err != nil {
+				return nil, fmt.Errorf("failed to get ClusterTemplate: %w", err)
+			}
+			return &tmpl, nil
+		}
+		return nil, fmt.Errorf("failed to get Template: %w", err)
 	}
 	return &tmpl, nil
 }

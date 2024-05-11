@@ -58,7 +58,7 @@ func TestClient_GetTemplate(t *testing.T) {
 			c := &Client{
 				Client: tt.fields.Client,
 			}
-			got, err := c.GetTemplate(tt.args.ctx, tt.args.tmplName)
+			got, err := c.GetTemplateObject(tt.args.ctx, tt.args.tmplName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Client.GetTemplate() error = %v, wantErr %v", err, tt.wantErr)
 				return

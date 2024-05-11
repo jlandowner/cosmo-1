@@ -12,15 +12,25 @@ import (
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
-func C2D_Templates(tmpls []cosmov1alpha1.TemplateObject) []*dashv1alpha1.Template {
+type TemplateConvertOptions func(c cosmov1alpha1.TemplateObject, d *dashv1alpha1.Template)
+
+func WithTemplateRaw(withRaw *bool) func(c cosmov1alpha1.TemplateObject, d *dashv1alpha1.Template) {
+	return func(c cosmov1alpha1.TemplateObject, d *dashv1alpha1.Template) {
+		if withRaw != nil && *withRaw {
+			d.Raw = ToYAML(c)
+		}
+	}
+}
+
+func C2D_Templates(tmpls []cosmov1alpha1.TemplateObject, opts ...TemplateConvertOptions) []*dashv1alpha1.Template {
 	dTmpls := make([]*dashv1alpha1.Template, len(tmpls))
 	for i, v := range tmpls {
-		dTmpls[i] = C2D_Template(v)
+		dTmpls[i] = C2D_Template(v, opts...)
 	}
 	return dTmpls
 }
 
-func C2D_Template(tmpl cosmov1alpha1.TemplateObject) *dashv1alpha1.Template {
+func C2D_Template(tmpl cosmov1alpha1.TemplateObject, opts ...TemplateConvertOptions) *dashv1alpha1.Template {
 	requiredVars := make([]*dashv1alpha1.TemplateRequiredVars, len(tmpl.GetSpec().RequiredVars))
 	for i, v := range tmpl.GetSpec().RequiredVars {
 		requiredVars[i] = &dashv1alpha1.TemplateRequiredVars{
@@ -29,7 +39,7 @@ func C2D_Template(tmpl cosmov1alpha1.TemplateObject) *dashv1alpha1.Template {
 		}
 	}
 
-	return &dashv1alpha1.Template{
+	d := &dashv1alpha1.Template{
 		Name:           tmpl.GetName(),
 		Description:    tmpl.GetSpec().Description,
 		RequiredVars:   requiredVars,
@@ -59,4 +69,8 @@ func C2D_Template(tmpl cosmov1alpha1.TemplateObject) *dashv1alpha1.Template {
 			return nil
 		}(),
 	}
+	for _, opt := range opts {
+		opt(tmpl, d)
+	}
+	return d
 }

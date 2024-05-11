@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	connect_go "github.com/bufbuild/connect-go"
-	"google.golang.org/protobuf/types/known/emptypb"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
@@ -67,7 +66,7 @@ func (s *Server) CreateUser(ctx context.Context, req *connect_go.Request[dashv1a
 	return connect_go.NewResponse(res), nil
 }
 
-func (s *Server) GetUsers(ctx context.Context, req *connect_go.Request[emptypb.Empty]) (*connect_go.Response[dashv1alpha1.GetUsersResponse], error) {
+func (s *Server) GetUsers(ctx context.Context, req *connect_go.Request[dashv1alpha1.GetUsersRequest]) (*connect_go.Response[dashv1alpha1.GetUsersResponse], error) {
 	log := clog.FromContext(ctx).WithCaller()
 	log.Debug().Info("request", "req", req)
 
@@ -81,10 +80,8 @@ func (s *Server) GetUsers(ctx context.Context, req *connect_go.Request[emptypb.E
 		return nil, ErrResponse(log, err)
 	}
 
-	res := &dashv1alpha1.GetUsersResponse{}
-	res.Items = make([]*dashv1alpha1.User, len(users))
-	for i := range users {
-		res.Items[i] = apiconv.C2D_User(users[i])
+	res := &dashv1alpha1.GetUsersResponse{
+		Items: apiconv.C2D_Users(users, apiconv.WithUserRaw(req.Msg.WithRaw)),
 	}
 	if len(res.Items) == 0 {
 		res.Message = "No items found"
@@ -104,10 +101,16 @@ func (s *Server) GetUser(ctx context.Context, req *connect_go.Request[dashv1alph
 	if err != nil {
 		return nil, ErrResponse(log, err)
 	}
+	events, err := s.Klient.ListEvents(ctx, cosmov1alpha1.UserNamespace(user.Name))
+	if err != nil {
+		log.Error(err, "failed to list events", "namespace", cosmov1alpha1.UserNamespace(user.Name))
+	}
 
 	res := &dashv1alpha1.GetUserResponse{
-		User: apiconv.C2D_User(*user),
+		User: apiconv.C2D_User(*user, apiconv.WithUserRaw(req.Msg.WithRaw)),
 	}
+	res.User.Events = apiconv.K2D_Events(events)
+
 	return connect_go.NewResponse(res), nil
 }
 
