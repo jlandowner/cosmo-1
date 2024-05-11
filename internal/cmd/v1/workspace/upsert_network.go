@@ -3,6 +3,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -46,6 +47,9 @@ func (o *UpsertNetworkOption) Validate(cmd *cobra.Command, args []string) error 
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
+	}
 	return nil
 }
 
@@ -59,7 +63,7 @@ func (o *UpsertNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 		o.WorkspaceName = cli.GetCurrentWorkspaceName()
 		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}
-	if !o.UseKubeAPI && o.UserName == "" {
+	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 
@@ -70,6 +74,9 @@ func (o *UpsertNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 		Public:           o.Public,
 	}
 	o.rule.Default()
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -85,23 +92,26 @@ func (o *UpsertNetworkOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
+	var (
+		rule *dashv1alpha1.NetworkRule
+		err  error
+	)
 	if o.UseKubeAPI {
-		err := o.UpsertNetworkRuleByKubeClient(ctx)
-		if err != nil {
-			return err
-		}
+		rule, err = o.UpsertNetworkRuleByKubeClient(ctx)
 	} else {
-		err := o.UpsertNetworkRuleWithDashClient(ctx)
-		if err != nil {
-			return err
-		}
+		rule, err = o.UpsertNetworkRuleWithDashClient(ctx)
+	}
+	if err != nil {
+		return err
 	}
 
 	cmdutil.PrintfColorInfo(o.Out, "Successfully upsert network rule for workspace '%s'\n", o.WorkspaceName)
+
+	o.OutputTable(rule)
 	return nil
 }
 
-func (o *UpsertNetworkOption) UpsertNetworkRuleWithDashClient(ctx context.Context) error {
+func (o *UpsertNetworkOption) UpsertNetworkRuleWithDashClient(ctx context.Context) (*dashv1alpha1.NetworkRule, error) {
 	reqGet := &dashv1alpha1.GetWorkspaceRequest{
 		WsName:   o.WorkspaceName,
 		UserName: o.UserName,
@@ -109,7 +119,7 @@ func (o *UpsertNetworkOption) UpsertNetworkRuleWithDashClient(ctx context.Contex
 	c := o.CosmoDashClient
 	resGet, err := c.WorkspaceServiceClient.GetWorkspace(ctx, cli.NewRequestWithToken(reqGet, o.CliConfig))
 	if err != nil {
-		return fmt.Errorf("failed to connect dashboard server: %w", err)
+		return nil, fmt.Errorf("failed to connect dashboard server: %w", err)
 	}
 
 	rules := apiconv.D2C_NetworkRules(resGet.Msg.Workspace.Spec.Network)
@@ -124,24 +134,35 @@ func (o *UpsertNetworkOption) UpsertNetworkRuleWithDashClient(ctx context.Contex
 	}
 	res, err := c.WorkspaceServiceClient.UpsertNetworkRule(ctx, cli.NewRequestWithToken(req, o.CliConfig))
 	if err != nil {
-		return fmt.Errorf("failed to connect dashboard server: %w", err)
+		return nil, fmt.Errorf("failed to connect dashboard server: %w", err)
 	}
 	o.Logr.DebugAll().Info("WorkspaceServiceClient.UpsertNetworkRule", "res", res)
-	return nil
+	return res.Msg.NetworkRule, nil
 }
 
-func (o *UpsertNetworkOption) UpsertNetworkRuleByKubeClient(ctx context.Context) error {
+func (o *UpsertNetworkOption) UpsertNetworkRuleByKubeClient(ctx context.Context) (*dashv1alpha1.NetworkRule, error) {
 	c := o.KosmoClient
 
 	ws, err := c.GetWorkspaceByUserName(ctx, o.WorkspaceName, o.UserName)
 	if err != nil {
-		return fmt.Errorf("failed to get workspace: %v", err)
+		return nil, fmt.Errorf("failed to get workspace: %v", err)
 	}
 	index := cosmov1alpha1.GetNetworkRuleIndex(ws.Spec.Network, o.rule)
 
-	if _, err := c.AddNetworkRule(ctx, o.WorkspaceName, o.UserName, o.rule, index); err != nil {
-		return err
+	cr, err := c.AddNetworkRule(ctx, o.WorkspaceName, o.UserName, o.rule, index)
+	if err != nil {
+		return nil, err
 	}
+	dr := apiconv.C2D_NetworkRule(*cr)
 
-	return nil
+	return &dr, nil
+}
+
+func (o *UpsertNetworkOption) OutputTable(v *dashv1alpha1.NetworkRule) {
+	data := [][]string{
+		{fmt.Sprintf("%d", v.PortNumber), v.CustomHostPrefix, v.HttpPath, strconv.FormatBool(v.Public), v.Url},
+	}
+	cli.OutputTable(o.Out,
+		[]string{"PORT", "CUSTOM_HOST_PREFIX", "HTTP_PATH", "PUBLIC", "URL"},
+		data)
 }

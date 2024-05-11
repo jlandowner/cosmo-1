@@ -60,7 +60,7 @@ Manipulate COSMO Workspace resource.
 	workspaceCmd.AddCommand(RemoveNetworkCmd(&cobra.Command{
 		Use:     "remove-network WORKSPACE_NAME --port 8080",
 		Short:   "Remove workspace network",
-		Aliases: []string{"rm-net", "delete-net", "delete-network"},
+		Aliases: []string{"rm-net", "remove-net", "delete-net", "delete-network"},
 	}, o))
 
 	cmd.AddCommand(workspaceCmd)

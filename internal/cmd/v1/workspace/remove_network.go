@@ -33,7 +33,8 @@ func RemoveNetworkCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Comman
 
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
-	cmd.Flags().Int32Var(&o.PortNumber, "port", 0, "serivce port number")
+	cmd.Flags().Int32Var(&o.PortNumber, "port", 0, "serivce port number (Required)")
+	cmd.MarkFlagRequired("port")
 	cmd.Flags().StringVar(&o.CustomHostPrefix, "custom-host-prefix", "", "custom host prefix")
 	cmd.Flags().StringVar(&o.HTTPPath, "path", "/", "path for Ingress path when using ingress")
 
@@ -43,6 +44,9 @@ func RemoveNetworkCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Comman
 func (o *RemoveNetworkOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
+	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
 	}
 	return nil
 }
@@ -57,7 +61,7 @@ func (o *RemoveNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 		o.WorkspaceName = cli.GetCurrentWorkspaceName()
 		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}
-	if !o.UseKubeAPI && o.UserName == "" {
+	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
 
@@ -68,6 +72,9 @@ func (o *RemoveNetworkOption) Complete(cmd *cobra.Command, args []string) error 
 		Public:           o.Public,
 	}
 	o.rule.Default()
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -95,7 +102,7 @@ func (o *RemoveNetworkOption) RunE(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully upsert network rule for workspace '%s'\n", o.WorkspaceName)
+	cmdutil.PrintfColorInfo(o.Out, "Successfully removed network rule for workspace '%s'\n", o.WorkspaceName)
 	return nil
 }
 

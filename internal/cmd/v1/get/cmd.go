@@ -36,7 +36,7 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
 		Use:     "network WORKSPACE_NAME",
 		Short:   "Get workspace networks",
-		Aliases: []string{"workspace-network", "workspace-networks", "ws-net", "wsnet"},
+		Aliases: []string{"net", "workspace-network", "ws-net", "wsnet"},
 	}, o))
 	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
 		Use:     "events [USER_NAME]",

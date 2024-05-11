@@ -32,6 +32,9 @@ func (o *GetNetworkOption) Validate(cmd *cobra.Command, args []string) error {
 	if err := o.RootOptions.Validate(cmd, args); err != nil {
 		return err
 	}
+	if o.UseKubeAPI && o.UserName == "" {
+		return fmt.Errorf("user name is required")
+	}
 	return nil
 }
 
@@ -45,9 +48,12 @@ func (o *GetNetworkOption) Complete(cmd *cobra.Command, args []string) error {
 		o.WorkspaceName = cli.GetCurrentWorkspaceName()
 		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}
-	if !o.UseKubeAPI && o.UserName == "" {
+	if o.UserName == "" {
 		o.UserName = o.CliConfig.User
 	}
+
+	cmd.SilenceErrors = true
+	cmd.SilenceUsage = true
 	return nil
 }
 
@@ -63,22 +69,21 @@ func (o *GetNetworkOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	var workspace *dashv1alpha1.Workspace
-	var err error
+	var (
+		workspace *dashv1alpha1.Workspace
+		err       error
+	)
 	if o.UseKubeAPI {
 		workspace, err = o.GetWorkspaceByKubeClient(ctx)
-		if err != nil {
-			return err
-		}
 	} else {
 		workspace, err = o.GetWorkspaceWithDashClient(ctx)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 	o.Logr.Debug().Info("Workspace", "workspace", workspace)
 
-	o.Output(workspace)
+	o.OutputTable(workspace)
 
 	return nil
 
@@ -98,7 +103,7 @@ func (o *GetNetworkOption) GetWorkspaceWithDashClient(ctx context.Context) (*das
 	return res.Msg.Workspace, nil
 }
 
-func (o *GetNetworkOption) Output(workspace *dashv1alpha1.Workspace) {
+func (o *GetNetworkOption) OutputTable(workspace *dashv1alpha1.Workspace) {
 	data := [][]string{}
 
 	for _, v := range workspace.Spec.Network {
