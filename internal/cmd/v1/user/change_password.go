@@ -55,6 +55,10 @@ func (o *changePasswordOption) Complete(cmd *cobra.Command, args []string) error
 		o.Logr.Info(fmt.Sprintf("Change login user password: %s", o.UserName))
 	}
 
+	if err := o.ValidateUser(o.Ctx); err != nil {
+		return err
+	}
+
 	if o.PasswordStdin {
 		if !o.UseKubeAPI {
 			return errors.New("--password-stdin is only supported with -k")
@@ -96,10 +100,6 @@ func (o *changePasswordOption) RunE(cmd *cobra.Command, args []string) error {
 	defer cancel()
 	ctx = clog.IntoContext(ctx, o.Logr)
 
-	if err := o.ValidateUser(ctx); err != nil {
-		return err
-	}
-
 	if o.UseKubeAPI {
 		if err := o.changePasswordWithKubeClient(ctx); err != nil {
 			return err
@@ -116,18 +116,17 @@ func (o *changePasswordOption) RunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *changePasswordOption) ValidateUser(ctx context.Context) error {
-	var user *dashv1alpha1.User
-	var err error
+	var (
+		user *dashv1alpha1.User
+		err  error
+	)
 	if o.UseKubeAPI {
 		user, err = o.getUserWithKubeClient(ctx, o.UserName)
-		if err != nil {
-			return err
-		}
 	} else {
 		user, err = o.getUserWithDashClient(ctx, o.UserName)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 	if cosmov1alpha1.UserAuthType(user.AuthType) != cosmov1alpha1.UserAuthTypePasswordSecert {
 		return fmt.Errorf("password cannot be changed if auth-type is '%s'", user.AuthType)
