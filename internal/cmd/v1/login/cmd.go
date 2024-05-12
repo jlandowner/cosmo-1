@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bufbuild/connect-go"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
+	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
 func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
@@ -156,11 +158,11 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	ctx = clog.IntoContext(ctx, o.Logr)
 
 	c := o.CosmoDashClient
-	ses, err := c.GetSession(ctx, o.UserName, o.Password)
+	res, err := c.AuthServiceClient.Login(ctx, connect.NewRequest(&dashv1alpha1.LoginRequest{UserName: o.UserName, Password: o.Password}))
 	if err != nil {
 		return fmt.Errorf("failed to login: %w", err)
 	}
-	o.CliConfig.Token = ses
+	o.CliConfig.Token = cli.ExtractSessionToken(res)
 	o.CliConfig.User = o.UserName
 	o.CliConfig.Endpoint = o.GetDashboardURL()
 

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -42,12 +41,8 @@ func NewCosmoDashClient(httpClient connect.HTTPClient, baseURL *url.URL) *CosmoD
 	}
 }
 
-func (c *CosmoDashClient) GetSession(ctx context.Context, userName string, password string) (string, error) {
-	res, err := c.AuthServiceClient.Login(ctx, connect.NewRequest(&dashv1alpha1.LoginRequest{UserName: userName, Password: password}))
-	if err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString([]byte(res.Header().Get("Set-Cookie"))), nil
+func ExtractSessionToken(res *connect.Response[dashv1alpha1.LoginResponse]) string {
+	return base64.StdEncoding.EncodeToString([]byte(res.Header().Get("Set-Cookie")))
 }
 
 func NewRequestWithToken[T any](message *T, cfg *Config) *connect.Request[T] {
