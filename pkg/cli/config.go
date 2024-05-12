@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,11 +9,28 @@ import (
 )
 
 type Config struct {
-	Endpoint string
-	Token    string
-	User     string
+	Endpoint          string `json:"endpoint"`
+	Token             string `json:"token"`
+	User              string `json:"user"`
+	UseServiceAccount bool   `json:"useServiceAccount,omitempty"`
+	CACert            string `json:"cacert,omitempty"`
 
 	cfg string
+}
+
+func (c *Config) GetCACert() []byte {
+	if c.CACert == "" {
+		return []byte{}
+	}
+	s, err := base64.StdEncoding.DecodeString(c.CACert)
+	if err != nil {
+		return []byte{}
+	}
+	return s
+}
+
+func (c *Config) SetCACert(ca []byte) {
+	c.CACert = base64.StdEncoding.EncodeToString(ca)
 }
 
 func (c *Config) SetPath(path string) {

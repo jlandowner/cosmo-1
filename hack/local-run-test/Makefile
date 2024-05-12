@@ -240,7 +240,7 @@ docker-cache-clear: ## docker cache clear.
 
 LOGLEVEL ?= info
 
-install-cosmo: helm kubectl docker-build-manager docker-build-dashboard docker-build-traefik-plugins ## Install cosmo resources.
+install-cosmo: #helm kubectl docker-build-manager docker-build-dashboard docker-build-traefik-plugins ## Install cosmo resources.
 	@echo ====== $@ ======
 	helm dependency update ../../charts/cosmo
 	helm upgrade --install cosmo ../../charts/cosmo \

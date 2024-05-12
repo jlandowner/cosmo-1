@@ -44,7 +44,7 @@ func (o *GetNetworkOption) Complete(cmd *cobra.Command, args []string) error {
 	}
 	if len(args) > 0 {
 		o.WorkspaceName = args[0]
-	} else {
+	} else if cli.UseServiceAccount(o.CliConfig) {
 		o.WorkspaceName = cli.GetCurrentWorkspaceName()
 		o.Logr.Info("Workspace name is auto detected from hostname", "name", o.WorkspaceName)
 	}

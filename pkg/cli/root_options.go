@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -37,6 +38,8 @@ type RootOptions struct {
 	DashboardURL   string
 	ConfigPath     string
 	LogLevel       int
+
+	DisableUseServiceAccount bool
 
 	In       io.Reader
 	Out      io.Writer
@@ -100,6 +103,7 @@ func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to build logger: %w", err)
 	}
 	if o.UseKubeAPI && o.KosmoClient == nil {
+		o.Logr.Debug().Info("use kube client")
 		if err := o.buildKosmoClient(); err != nil {
 			return fmt.Errorf("failed to kubernetes client: %w", err)
 		}
@@ -115,9 +119,18 @@ func (o *RootOptions) Complete(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to load config file: %w", err)
 		}
 		o.CliConfig = cfg
+		o.Logr.DebugAll().Info("config", "endpoint", cfg.Endpoint, "token", cfg.Token, "user", cfg.User, "useServiceAccount", cfg.UseServiceAccount, "cacert", cfg.CACert)
 
-		if err := o.buildDashClient(); err != nil {
-			return fmt.Errorf("failed to build COSMO Dashboard API client: %w", err)
+		if !o.DisableUseServiceAccount && UseServiceAccount(o.CliConfig) {
+			o.Logr.Debug().Info("use in-cluster cosmo dashboard client")
+			if err := o.buildInClusterDashClientAndVerify(); err != nil {
+				return fmt.Errorf("failed to build in-cluster COSMO Dashboard API client: %w", err)
+			}
+		} else {
+			o.Logr.Debug().Info("use cosmo dashboard client")
+			if err := o.buildDashClient(); err != nil {
+				return fmt.Errorf("failed to build COSMO Dashboard API client: %w", err)
+			}
 		}
 	}
 
@@ -159,6 +172,8 @@ func (o *RootOptions) GetDashboardURL() string {
 		return envURL
 	} else if o.CliConfig.Endpoint != "" {
 		return o.CliConfig.Endpoint
+	} else if UseServiceAccount(o.CliConfig) {
+		return InClusterDashboardURL()
 	} else {
 		return ""
 	}
@@ -176,7 +191,61 @@ func (o *RootOptions) buildDashClient() error {
 		return err
 	}
 
-	o.CosmoDashClient = NewCosmoDashClient(http.DefaultClient, baseURL)
+	httpClient := http.DefaultClient
+	if o.CliConfig.CACert != "" {
+		c, err := InClusterHTTPClient(o.CliConfig.GetCACert())
+		if err != nil {
+			return err
+		}
+		httpClient = c
+	}
+
+	o.CosmoDashClient = NewCosmoDashClient(httpClient, baseURL)
+	return nil
+}
+
+func (o *RootOptions) buildInClusterDashClientAndVerify() error {
+	if o.CliConfig.CACert == "" {
+		// login first if config is not found
+		o.Logr.Debug().Info("login first")
+		if err := ServiceAccountLogin(o.Ctx, o.CliConfig); err != nil {
+			return fmt.Errorf("failed to authenticate: %w", err)
+		}
+		return o.buildInClusterDashClient()
+
+	} else {
+		// verify and re-authenticate if expired
+		if err := o.buildInClusterDashClient(); err != nil {
+			return err
+		}
+
+		o.Logr.Debug().Info("in-cluster pre verify")
+		_, err := o.CosmoDashClient.AuthServiceClient.
+			Verify(o.Ctx, NewRequestWithToken(&emptypb.Empty{}, o.CliConfig))
+
+		if err != nil {
+			o.Logr.Debug().Info("failed to verify session token. re-authenticate", "err", err)
+
+			if err := ServiceAccountLogin(o.Ctx, o.CliConfig); err != nil {
+				return fmt.Errorf("failed to authenticate: %w", err)
+			}
+			o.Logr.Debug().Info("successfully re-authenticated")
+		}
+	}
+	return nil
+}
+
+func (o *RootOptions) buildInClusterDashClient() error {
+	httpClient, err := InClusterHTTPClient(o.CliConfig.GetCACert())
+	if err != nil {
+		return fmt.Errorf("serviceAccountLogin: failed to create http client: %w", err)
+	}
+
+	baseURL, err := url.Parse(InClusterDashboardURL())
+	if err != nil {
+		return fmt.Errorf("serviceAccountLogin: failed to parse dashboard url: %w", err)
+	}
+	o.CosmoDashClient = NewCosmoDashClient(httpClient, baseURL)
 	return nil
 }
 
@@ -218,7 +287,7 @@ func (o *RootOptions) Logger() *clog.Logger {
 }
 
 // GetCurrentWorkspaceName returns current workspace name.
-// If running in Workspace pod, hostname is like `ws1-workspace-575db4c9cd-h558m`
+// If running in Workspace pod, hostname is like `$INSTANCE-deploy-podsufix`(e.g.`ws1-workspace-575db4c9cd-h558m`)
 // the first part is workspace name prefixed by cosmo.
 func GetCurrentWorkspaceName() string {
 	hostname := os.Getenv("HOSTNAME")

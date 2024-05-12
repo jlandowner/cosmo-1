@@ -151,3 +151,40 @@ export class VerifyResponse extends Message<VerifyResponse> {
   }
 }
 
+/**
+ * @generated from message dashboard.v1alpha1.ServiceAccountLoginRequest
+ */
+export class ServiceAccountLoginRequest extends Message<ServiceAccountLoginRequest> {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token = "";
+
+  constructor(data?: PartialMessage<ServiceAccountLoginRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "dashboard.v1alpha1.ServiceAccountLoginRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ServiceAccountLoginRequest {
+    return new ServiceAccountLoginRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ServiceAccountLoginRequest {
+    return new ServiceAccountLoginRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ServiceAccountLoginRequest {
+    return new ServiceAccountLoginRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ServiceAccountLoginRequest | PlainMessage<ServiceAccountLoginRequest> | undefined, b: ServiceAccountLoginRequest | PlainMessage<ServiceAccountLoginRequest> | undefined): boolean {
+    return proto3.util.equals(ServiceAccountLoginRequest, a, b);
+  }
+}
+

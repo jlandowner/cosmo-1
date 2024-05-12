@@ -6,6 +6,7 @@
 - [dashboard/v1alpha1/auth_service.proto](#dashboard_v1alpha1_auth_service-proto)
     - [LoginRequest](#dashboard-v1alpha1-LoginRequest)
     - [LoginResponse](#dashboard-v1alpha1-LoginResponse)
+    - [ServiceAccountLoginRequest](#dashboard-v1alpha1-ServiceAccountLoginRequest)
     - [VerifyResponse](#dashboard-v1alpha1-VerifyResponse)
   
     - [AuthService](#dashboard-v1alpha1-AuthService)
@@ -141,6 +142,21 @@
 
 
 
+<a name="dashboard-v1alpha1-ServiceAccountLoginRequest"></a>
+
+### ServiceAccountLoginRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| token | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="dashboard-v1alpha1-VerifyResponse"></a>
 
 ### VerifyResponse
@@ -174,6 +190,7 @@
 | Login | [LoginRequest](#dashboard-v1alpha1-LoginRequest) | [LoginResponse](#dashboard-v1alpha1-LoginResponse) | ID and password to login |
 | Logout | [.google.protobuf.Empty](#google-protobuf-Empty) | [.google.protobuf.Empty](#google-protobuf-Empty) | Delete session to logout |
 | Verify | [.google.protobuf.Empty](#google-protobuf-Empty) | [VerifyResponse](#dashboard-v1alpha1-VerifyResponse) | Verify authorization |
+| ServiceAccountLogin | [ServiceAccountLoginRequest](#dashboard-v1alpha1-ServiceAccountLoginRequest) | [LoginResponse](#dashboard-v1alpha1-LoginResponse) | Kubernetes ServiceAccount to login |
 
  
 

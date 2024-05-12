@@ -128,6 +128,7 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		o.Password = input
 	}
 
+	o.RootOptions.DisableUseServiceAccount = true
 	if err := o.RootOptions.Complete(cmd, args); err != nil {
 		return err
 	}
@@ -165,6 +166,12 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 	o.CliConfig.Token = cli.ExtractSessionToken(res)
 	o.CliConfig.User = o.UserName
 	o.CliConfig.Endpoint = o.GetDashboardURL()
+	o.CliConfig.UseServiceAccount = false
+
+	// reset cacert if endpoint is not in cluster
+	if o.CliConfig.Endpoint != cli.InClusterDashboardURL() {
+		o.CliConfig.CACert = ""
+	}
 
 	// save session
 	err = o.CliConfig.Save()

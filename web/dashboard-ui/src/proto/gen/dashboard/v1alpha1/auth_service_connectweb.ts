@@ -7,7 +7,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { LoginRequest, LoginResponse, VerifyResponse } from "./auth_service_pb.js";
+import { LoginRequest, LoginResponse, ServiceAccountLoginRequest, VerifyResponse } from "./auth_service_pb.js";
 import { Empty, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -47,6 +47,17 @@ export const AuthService = {
       name: "Verify",
       I: Empty,
       O: VerifyResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Kubernetes ServiceAccount to login
+     *
+     * @generated from rpc dashboard.v1alpha1.AuthService.ServiceAccountLogin
+     */
+    serviceAccountLogin: {
+      name: "ServiceAccountLogin",
+      I: ServiceAccountLoginRequest,
+      O: LoginResponse,
       kind: MethodKind.Unary,
     },
   }
