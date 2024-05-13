@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/cosmo-workspace/cosmo/internal/cmd/v1"
+	"github.com/cosmo-workspace/cosmo/internal/cmd"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 )
 

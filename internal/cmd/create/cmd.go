@@ -1,8 +1,8 @@
 package create
 
 import (
-	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/user"
-	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/workspace"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/user"
+	"github.com/cosmo-workspace/cosmo/internal/cmd/workspace"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/spf13/cobra"
 )
