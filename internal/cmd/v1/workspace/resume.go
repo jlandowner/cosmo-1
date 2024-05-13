@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/ptr"
 
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
@@ -83,7 +83,7 @@ func (o *ResumeOption) RunE(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
-		cmdutil.PrintfColorInfo(o.Out, "Successfully resumed workspace %s\n", v)
+		fmt.Fprintln(o.Out, color.GreenString("Successfully resumed workspace %s", v))
 	}
 
 	return nil

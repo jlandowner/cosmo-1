@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/internal/cmd/v1/create"
@@ -61,7 +62,7 @@ func Execute(v cli.VersionInfo) {
 	rootCmd := NewRootCmd(o)
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(o.Out, "Error: %s\n", err)
+		fmt.Fprintln(o.ErrOut, color.RedString("Error: %s", err))
 		os.Exit(1)
 	}
 

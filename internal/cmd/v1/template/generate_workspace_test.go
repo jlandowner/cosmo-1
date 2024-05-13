@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/pkg/template"
 )
 
 func Test_completeWorkspaceConfig(t *testing.T) {
@@ -601,9 +602,9 @@ spec:
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := preTemplateBuild(tt.args.tmpl)
+			u, err := template.NewRawYAMLBuilder(tt.args.tmpl, nil).Build()
 			if err != nil {
-				t.Errorf("preTemplateBuild() error = %v", err)
+				t.Errorf("dummyTemplateBuild() error = %v", err)
 			}
 			if err := completeWorkspaceConfig(tt.args.wsConfig, u); (err != nil) != tt.wantErr {
 				t.Errorf("completeWorkspaceConfig() error = %v, wantErr %v", err, tt.wantErr)

@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -121,7 +121,11 @@ func (o *LoginOption) Complete(cmd *cobra.Command, args []string) error {
 		}
 		o.Password = input
 	} else {
-		input, err := cli.AskInput("Password     : ", true)
+		prompt := "Password     : "
+		if previousLogin.Endpoint == "" {
+			prompt = "Password: "
+		}
+		input, err := cli.AskInput(prompt, true)
 		if err != nil {
 			return err
 		}
@@ -179,7 +183,7 @@ func (o *LoginOption) RunE(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully logined to %s as %s\n", o.CliConfig.Endpoint, o.CliConfig.User)
+	fmt.Fprintln(o.Out, color.GreenString("Successfully logined to %s as %s", o.CliConfig.Endpoint, o.CliConfig.User))
 
 	return nil
 

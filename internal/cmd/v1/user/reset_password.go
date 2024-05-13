@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 )
 
 type resetPasswordOption struct {
@@ -94,7 +94,7 @@ func (o *resetPasswordOption) RunE(cmd *cobra.Command, args []string) error {
 	if o.Silent {
 		fmt.Fprintln(o.Out, *newPassword)
 	} else {
-		cmdutil.PrintfColorInfo(o.Out, "Successfully reset password: user %s\n", o.UserName)
+		fmt.Fprintln(o.Out, color.GreenString("Successfully reset password: user %s", o.UserName))
 		fmt.Fprintln(o.Out, "New password:", *newPassword)
 	}
 

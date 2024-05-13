@@ -8,13 +8,13 @@ import (
 	"time"
 
 	connect_go "github.com/bufbuild/connect-go"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -96,7 +96,7 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 			if connect_go.CodeOf(err) == connect_go.CodePermissionDenied {
 
 				if len(o.UserNames) == 0 {
-					cmdutil.PrintfColorErr(o.ErrOut, "WARNING: Without Admin roles, you can get only login user\n")
+					fmt.Fprintln(o.ErrOut, color.YellowString("WARNING: Without Admin roles, you can get only login user"))
 				} else {
 					for _, v := range o.UserNames {
 						if v != o.CliConfig.User {

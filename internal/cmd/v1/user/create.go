@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -156,7 +156,7 @@ func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	cmdutil.PrintfColorInfo(o.Out, "Successfully created user %s\n", o.UserName)
+	fmt.Fprintln(o.Out, color.GreenString("Successfully created user %s", o.UserName))
 	OutputTable(o.Out, []*dashv1alpha1.User{user})
 
 	if o.AuthType == cosmov1alpha1.UserAuthTypePasswordSecert.String() {

@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/cli"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
-	"github.com/cosmo-workspace/cosmo/pkg/cmdutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -121,7 +121,7 @@ func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cmdutil.PrintfColorInfo(o.Out, "Successfully created workspace %s\n", o.WorkspaceName)
+	fmt.Fprintln(o.Out, color.GreenString("Successfully created workspace %s", o.WorkspaceName))
 	OutputTable(o.Out, []*dashv1alpha1.Workspace{ws})
 
 	return nil
