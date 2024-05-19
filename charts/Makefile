@@ -40,6 +40,6 @@ webhook.yaml:
 	$(KUSTOMIZE) build ../config/webhook-chart \
 		| sed -e 's/namespace: system/namespace: {{ .Release.Namespace }}/g' \
 		| sed -z 's;apiVersion: v1\nkind: Service\nmetadata:\n  name: cosmo-webhook-service\n  namespace: {{ .Release.Namespace }}\nspec:\n  ports:\n  - port: 443\n    targetPort: 9443\n  selector:\n    control-plane: controller-manager\n---;{{ $$tls := fromYaml ( include "cosmo.webhook.gen-certs" . ) }}\n---\n{{- if $$.Values.controllerManager.webhook.enabled }};g' \
-		| sed -z 's;creationTimestamp: null;{{- if $$.Values.certManager.enabled }}\n  annotations:\n    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/cosmo-webhook-cert\n  {{- end }}\n  labels:\n    {{- include "cosmo.labels" . | nindent 4 }};g' \
+		| sed -z 's;metadata:\n;metadata:\n{{- if $$.Values.certManager.enabled }}\n  annotations:\n    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/cosmo-webhook-cert\n  {{- end }}\n  labels:\n    {{- include "cosmo.labels" . | nindent 4 }}\n;g' \
 		| sed -z 's;clientConfig:;clientConfig:\n    caBundle: {{ if not $$.Values.certManager.enabled -}}{{ $$tls.caCert }}{{- else -}}Cg=={{ end }};g' > $(WEBHOOK_CHART_YAML)
 	echo '{{- end }}' >> $(WEBHOOK_CHART_YAML)
