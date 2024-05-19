@@ -32,7 +32,7 @@ func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	o := &GetOption{RootOptions: opt}
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'ROLE', 'ADDON', 'AUTHTYPE', 'PHASE']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter ROLE==*-dev --filter ROLE!=team-a'")
-	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml', 'wide']")
 	return cmd
 }
 
@@ -41,7 +41,7 @@ func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	switch o.OutputFormat {
-	case "table", "yaml":
+	case "table", "yaml", "wide":
 	default:
 		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
 	}
@@ -120,6 +120,9 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 
 	if o.OutputFormat == "yaml" {
 		o.OutputYAML(users)
+		return nil
+	} else if o.OutputFormat == "wide" {
+		OutputWideTable(o.Out, users)
 		return nil
 	} else {
 		OutputTable(o.Out, users)
@@ -213,22 +216,43 @@ func (o *GetOption) OutputYAML(objs []*dashv1alpha1.User) {
 	fmt.Fprintln(o.Out, strings.Join(docs, "---\n"))
 }
 
+func printAddons(addons []*dashv1alpha1.UserAddon) string {
+	arr := make([]string, len(addons))
+	for i, v := range addons {
+		arr[i] = v.Template
+	}
+	return strings.Join(arr, ",")
+}
+
+func printAddonWithVars(addons []*dashv1alpha1.UserAddon) string {
+	arr := make([]string, len(addons))
+	for i, v := range apiconv.D2S_UserAddons(addons) {
+		arr[i] = v
+	}
+	return strings.Join(arr, " ")
+}
+
 func OutputTable(out io.Writer, users []*dashv1alpha1.User) {
 	data := [][]string{}
 
 	for _, v := range users {
-		role := make([]string, 0, len(v.Roles))
-		role = append(role, v.Roles...)
-
-		addons := make([]string, 0, len(v.Addons))
-		for _, v := range v.Addons {
-			addons = append(addons, v.Template)
-		}
-		data = append(data, []string{v.Name, strings.Join(role, ","), v.AuthType, cosmov1alpha1.UserNamespace(v.Name), v.Status, strings.Join(addons, ",")})
+		data = append(data, []string{v.Name, strings.Join(v.Roles, ","), v.AuthType, cosmov1alpha1.UserNamespace(v.Name), v.Status, printAddons(v.Addons)})
 	}
 
 	cli.OutputTable(out,
 		[]string{"NAME", "ROLES", "AUTHTYPE", "NAMESPACE", "PHASE", "ADDONS"},
+		data)
+}
+
+func OutputWideTable(out io.Writer, users []*dashv1alpha1.User) {
+	data := [][]string{}
+
+	for _, v := range users {
+		data = append(data, []string{v.Name, v.DisplayName, strings.Join(v.Roles, ","), v.AuthType, cosmov1alpha1.UserNamespace(v.Name), v.Status, printAddonWithVars(v.Addons)})
+	}
+
+	cli.OutputTable(out,
+		[]string{"NAME", "DISPLAYNAME", "ROLES", "AUTHTYPE", "NAMESPACE", "PHASE", "ADDONS"},
 		data)
 }
 

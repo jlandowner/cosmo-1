@@ -62,6 +62,10 @@ Manipulate COSMO Workspace resource.
 		Short:   "Remove workspace network",
 		Aliases: []string{"rm-net", "remove-net", "delete-net", "delete-network"},
 	}, o))
+	workspaceCmd.AddCommand(UpdateCmd(&cobra.Command{
+		Use:   "update WORKSPACE_NAME",
+		Short: "Update workspace",
+	}, o))
 
 	cmd.AddCommand(workspaceCmd)
 }

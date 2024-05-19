@@ -32,7 +32,7 @@ func GetCmd(cmd *cobra.Command, opt *cli.RootOptions) *cobra.Command {
 	cmd.RunE = cli.ConnectErrorHandler(o)
 	cmd.Flags().StringVarP(&o.UserName, "user", "u", "", "user name (defualt: login user)")
 	cmd.Flags().StringSliceVar(&o.Filter, "filter", nil, "filter option. available columns are ['NAME', 'TEMPLATE', 'PHASE']. available operators are ['==', '!=']. value format is filepath. e.g. '--filter TEMPLATE==dev-*'")
-	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml']")
+	cmd.Flags().StringVarP(&o.OutputFormat, "output", "o", "table", "output format. available values are ['table', 'yaml', 'wide']")
 	return cmd
 }
 
@@ -44,7 +44,7 @@ func (o *GetOption) Validate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("user name is required")
 	}
 	switch o.OutputFormat {
-	case "table", "yaml":
+	case "table", "yaml", "wide":
 	default:
 		return fmt.Errorf("invalid output format: %s", o.OutputFormat)
 	}
@@ -110,6 +110,9 @@ func (o *GetOption) RunE(cmd *cobra.Command, args []string) error {
 
 	if o.OutputFormat == "yaml" {
 		o.OutputYAML(workspaces)
+		return nil
+	} else if o.OutputFormat == "wide" {
+		OutputWideTable(o.Out, workspaces)
 		return nil
 	} else {
 		OutputTable(o.Out, workspaces)
@@ -187,6 +190,22 @@ func OutputTable(out io.Writer, workspaces []*dashv1alpha1.Workspace) {
 
 	cli.OutputTable(out,
 		[]string{"USER", "NAME", "TEMPLATE", "PHASE", "MAINURL"},
+		data)
+}
+
+func OutputWideTable(out io.Writer, workspaces []*dashv1alpha1.Workspace) {
+	data := [][]string{}
+
+	for _, v := range workspaces {
+		vars := make([]string, 0, len(v.Spec.Vars))
+		for k, vv := range v.Spec.Vars {
+			vars = append(vars, fmt.Sprintf("%s=%s", k, vv))
+		}
+		data = append(data, []string{v.OwnerName, v.Name, v.Spec.Template, strings.Join(vars, ","), v.Status.Phase, v.Status.MainUrl})
+	}
+
+	cli.OutputTable(out,
+		[]string{"USER", "NAME", "TEMPLATE", "VARS", "PHASE", "MAINURL"},
 		data)
 }
 

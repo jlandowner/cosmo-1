@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -39,7 +38,7 @@ func CreateCmd(cmd *cobra.Command, cliOpt *cli.RootOptions) *cobra.Command {
 	cmd.Flags().StringSliceVar(&o.Roles, "role", nil, "user roles")
 	cmd.Flags().StringVar(&o.AuthType, "auth-type", cosmov1alpha1.UserAuthTypePasswordSecert.String(), "user auth type 'password-secret'(default),'ldap'")
 	cmd.Flags().BoolVar(&o.PrivilegedRole, "privileged", false, "add cosmo-admin role (privileged)")
-	cmd.Flags().StringArrayVar(&o.Addons, "addon", nil, "user addons\nformat is '--addon TEMPLATE_NAME1,KEY:VAL,KEY:VAL --addon TEMPLATE_NAME2,KEY:VAL ...' ")
+	cmd.Flags().StringArrayVar(&o.Addons, "addon", nil, "user addons\nformat is '--addon TEMPLATE_NAME1,KEY=VAL,KEY=VAL --addon TEMPLATE_NAME2,KEY=VAL ...' ")
 	cmd.Flags().BoolVar(&o.Force, "force", false, "not ask confirmation")
 	return cmd
 }
@@ -70,7 +69,7 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 
 	o.userAddons = make([]*dashv1alpha1.UserAddon, 0, len(o.Addons))
 	if len(o.Addons) > 0 {
-		userAddons, err := parseUserAddonOptions(o.Addons, false)
+		userAddons, err := apiconv.S2D_UserAddons(o.Addons)
 		if err != nil {
 			return err
 		}
@@ -80,37 +79,6 @@ func (o *CreateOption) Complete(cmd *cobra.Command, args []string) error {
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
 	return nil
-}
-
-func parseUserAddonOptions(rawAddonOptionArray []string, isClusterScope bool) ([]*dashv1alpha1.UserAddon, error) {
-	// format
-	//   TEMPLATE_NAME
-	//   TEMPLATE_NAME,KEY1:XXX,KEY2:YYY ZZZ,KEY3:
-	r1 := regexp.MustCompile(`^[^: ,]+(,([^: ,]+):([^,]*))*$`)
-	r2 := regexp.MustCompile(`^([^: ,]+):([^,]*)$`)
-
-	userAddons := make([]*dashv1alpha1.UserAddon, 0, len(rawAddonOptionArray))
-
-	for _, addonParm := range rawAddonOptionArray {
-		if !r1.MatchString(addonParm) {
-			return nil, fmt.Errorf("invalid addon vars format: %s", addonParm)
-		}
-
-		addonSplits := strings.Split(addonParm, ",")
-
-		userAddon := &dashv1alpha1.UserAddon{
-			Template:      addonSplits[0],
-			ClusterScoped: isClusterScope,
-			Vars:          make(map[string]string, len(addonSplits)-1),
-		}
-
-		for _, k_v := range addonSplits[1:] {
-			kv := r2.FindStringSubmatch(k_v)
-			userAddon.Vars[kv[1]] = kv[2]
-		}
-		userAddons = append(userAddons, userAddon)
-	}
-	return userAddons, nil
 }
 
 func (o *CreateOption) RunE(cmd *cobra.Command, args []string) error {

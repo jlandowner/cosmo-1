@@ -31,17 +31,17 @@ func AddCommand(cmd *cobra.Command, o *cli.RootOptions) {
 	getCmd.AddCommand(user.GetAddonsCmd(&cobra.Command{
 		Use:     "useraddon [ADDON_NAME...]",
 		Short:   "Get user addons. Alias of 'cosmoctl user get-addons'",
-		Aliases: []string{"useraddon", "addon", "addons", "user-addon", "user-addons"},
+		Aliases: []string{"useraddon", "useraddons", "addon", "addons", "user-addon", "user-addons"},
 	}, o))
 	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
 		Use:     "network WORKSPACE_NAME",
 		Short:   "Get workspace networks",
-		Aliases: []string{"net", "workspace-network", "ws-net", "wsnet"},
+		Aliases: []string{"net", "workspace-networks", "workspace-network", "ws-net", "wsnet"},
 	}, o))
-	getCmd.AddCommand(workspace.GetNetworkCmd(&cobra.Command{
+	getCmd.AddCommand(user.GetEventsCmd(&cobra.Command{
 		Use:     "events [USER_NAME]",
 		Short:   "Get events for user",
-		Aliases: []string{"event"},
+		Aliases: []string{"event", "events"},
 	}, o))
 	cmd.AddCommand(getCmd)
 }
