@@ -3,6 +3,7 @@ package apiconv
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -92,26 +93,40 @@ func S2D_UserAddons(addons []string) ([]*dashv1alpha1.UserAddon, error) {
 	// format
 	//   TEMPLATE_NAME
 	//   TEMPLATE_NAME,KEY1=XXX,KEY2="YYY ZZZ"
-	r1 := regexp.MustCompile(`^[^= ,]+(,([^= ,]+)=([^,]*))*$`)
+	r1 := regexp.MustCompile(`\w(:\w+=\w+(,\w+=\w+)*)?`)
 	r2 := regexp.MustCompile(`^([^= ,]+)=([^,]*)$`)
 
 	userAddons := make([]*dashv1alpha1.UserAddon, 0, len(addons))
 
 	for _, addonParm := range addons {
 		if !r1.MatchString(addonParm) {
-			return nil, fmt.Errorf("invalid addon vars format: %s", addonParm)
+			return nil, fmt.Errorf("invalid addon format: %s", addonParm)
 		}
 
-		addonSplits := strings.Split(addonParm, ",")
+		addonAndVars := strings.Split(addonParm, ":")
+		if addonAndVars[0] == "" {
+			return nil, fmt.Errorf("invalid addon format: %s", addonParm)
+		}
 
 		userAddon := &dashv1alpha1.UserAddon{
-			Template: addonSplits[0],
-			Vars:     make(map[string]string, len(addonSplits)-1),
+			Template: addonAndVars[0],
 		}
 
-		for _, k_v := range addonSplits[1:] {
-			kv := r2.FindStringSubmatch(k_v)
-			userAddon.Vars[kv[1]] = kv[2]
+		if len(addonAndVars) > 1 {
+			addonSplits := strings.Split(addonAndVars[1], ",")
+			userAddon.Vars = make(map[string]string, len(addonSplits))
+
+			for _, k_v := range addonSplits {
+				kv := r2.FindStringSubmatch(k_v)
+				if len(kv) != 3 {
+					return nil, fmt.Errorf("invalid addon vars format: %s", k_v)
+				}
+				_, ok := userAddon.Vars[kv[1]]
+				if ok {
+					return nil, fmt.Errorf("duplicate addon vars: %s", kv[1])
+				}
+				userAddon.Vars[kv[1]] = kv[2]
+			}
 		}
 		userAddons = append(userAddons, userAddon)
 	}
@@ -126,8 +141,9 @@ func D2S_UserAddons(addons []*dashv1alpha1.UserAddon) []string {
 		for k, v := range addon.Vars {
 			kv = append(kv, fmt.Sprintf("%s=%s", k, v))
 		}
+		sort.Strings(kv)
 		if len(kv) > 0 {
-			t = fmt.Sprintf("%s,%s", t, strings.Join(kv, ","))
+			t = fmt.Sprintf("%s:%s", t, strings.Join(kv, ","))
 		}
 		s[i] = t
 	}
