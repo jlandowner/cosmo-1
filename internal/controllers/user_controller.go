@@ -20,6 +20,7 @@ import (
 	"github.com/cosmo-workspace/cosmo/pkg/auth/password"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/instance"
+	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
 	"github.com/cosmo-workspace/cosmo/pkg/useraddon"
 )
 
@@ -51,12 +52,12 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return r.patchNamespaceToUserDesired(&ns, user)
 	})
 	if err != nil {
-		r.Recorder.Eventf(&user, corev1.EventTypeWarning, "Sync Failed", "failed to sync namespace: %v", err)
+		kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeWarning, "SyncFailed", "Failed to sync namespace %s: %v", ns.Name, err)
 		return ctrl.Result{}, fmt.Errorf("failed to sync namespace: %w", err)
 	}
 	if op != controllerutil.OperationResultNone {
 		log.Info("namespace synced", "namespace", ns.Name)
-		r.Recorder.Eventf(&user, corev1.EventTypeNormal, string(op), "successfully reconciled. namespace synced")
+		kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeNormal, "Synced", "Successfully reconciled. Namespace %s is %s", ns.Name, op)
 	}
 
 	user.Status.Phase = ns.Status.Phase
@@ -80,12 +81,12 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		// generate default password if password secret is not found
 		if _, err := password.GetDefaultPassword(ctx, r.Client, user.Name); err != nil && apierrs.IsNotFound(err) {
 			if err := password.ResetPassword(ctx, r.Client, user.Name); err != nil {
-				r.Recorder.Eventf(&user, corev1.EventTypeWarning, "InitFailed", "failed to reset password: %v", err)
+				kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeWarning, "PasswordInitFailed", "Failed to reset password: %v", err)
 				log.Error(err, "failed to reset password")
 				return ctrl.Result{}, err
 			}
 			log.Info("password secret initialized")
-			r.Recorder.Eventf(&user, corev1.EventTypeNormal, "PasswordSecret Initialized", "successfully reset password secret")
+			kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeNormal, "PasswordInitialized", "Successfully reset password secret")
 		}
 	}
 
@@ -124,7 +125,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		if op != controllerutil.OperationResultNone {
 			log.Info("addon synced", "addon", addon)
-			r.Recorder.Eventf(&user, corev1.EventTypeNormal, "Addon Synced", fmt.Sprintf("addon %s is %s", addon.Template.Name, op))
+			kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeNormal, "AddonSynced", "Addon %s is %s", addon.Template.Name, op)
 		} else {
 			log.Debug().Info("the result of update addon instance operation is None", "addon", addon)
 		}
@@ -150,8 +151,8 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	if len(addonErrs) > 0 {
 		for _, e := range addonErrs {
-			r.Recorder.Eventf(&user, corev1.EventTypeWarning, "AddonFailed", "failed to create or update user addon: %v", e)
-			log.Error(e, "failed to create or update user addon")
+			kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeWarning, "AddonFailed", "Failed to sync addon: %v", e)
+			log.Error(e, "failed to sync user addon")
 		}
 		user.Status.Phase = "AddonFailed"
 		err = addonErrs[0]
@@ -166,16 +167,16 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Info("status updated")
 	}
 
-	if user.Status.Phase != "AddonFailed" && !cosmov1alpha1.IsPruneDisabled(&user) {
+	if user.Status.Phase != "AddonFailed" && !cosmov1alpha1.KeepResourceDeletePolicy(&user) {
 		log.Debug().Info("checking garbage collection")
 		shouldDeletes := objectRefNotExistsInMap(lastAddons, currAddonsMap)
 		for _, d := range shouldDeletes {
 			if skip, err := prune(ctx, r.Client, d); err != nil {
 				log.Error(err, "failed to delete unused addon", "pruneAPIVersion", d.APIVersion, "pruneKind", d.Kind, "pruneName", d.Name, "pruneNamespace", d.Namespace)
-				r.Recorder.Eventf(&user, corev1.EventTypeWarning, "GCFailed", "failed to delete unused addon: kind=%s name=%s namespace=%s", d.Kind, d.Name, d.Namespace)
+				kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeWarning, "GCFailed", "Failed to delete unused addon: kind=%s name=%s namespace=%s", d.Kind, d.Name, d.Namespace)
 			} else if !skip {
 				log.Info("deleted unmanaged addon", "apiVersion", d.APIVersion, "kind", d.Kind, "name", d.Name, "namespace", d.Namespace)
-				r.Recorder.Eventf(&user, corev1.EventTypeNormal, "GC", "deleted unmanaged addon: kind=%s name=%s namespace=%s", d.Kind, d.Name, d.Namespace)
+				kosmo.UserEventf(r.Recorder, &user, corev1.EventTypeNormal, "GC", "Deleted unmanaged addon: kind=%s name=%s namespace=%s", d.Kind, d.Name, d.Namespace)
 			}
 		}
 	}

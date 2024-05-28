@@ -80,7 +80,7 @@ Complete documentation is available at http://github.com/cosmo-workspace/cosmo
 
 MIT 2023 cosmo-workspace/cosmo
 `,
-		Version: "v1.0.0-rc5 cosmo-workspace 2023",
+		Version: "v1.0.0-rc6 cosmo-workspace 2023",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmd.SilenceUsage = true
 			ctrl.SetLogger(zap.New(zap.UseFlagOptions(&o.ZapOpts)))
@@ -116,6 +116,7 @@ MIT 2023 cosmo-workspace/cosmo
 			}
 			if err = (&controllers.TemplateReconciler{
 				Client:       mgr.GetClient(),
+				Recorder:     mgr.GetEventRecorderFor(tmplController),
 				Scheme:       mgr.GetScheme(),
 				FieldManager: controllerFieldManager,
 			}).SetupWithManager(mgr); err != nil {
@@ -132,6 +133,7 @@ MIT 2023 cosmo-workspace/cosmo
 			}
 			if err = (&controllers.ClusterTemplateReconciler{
 				Client:       mgr.GetClient(),
+				Recorder:     mgr.GetEventRecorderFor(clusterTmplController),
 				Scheme:       mgr.GetScheme(),
 				FieldManager: controllerFieldManager,
 			}).SetupWithManager(mgr); err != nil {
