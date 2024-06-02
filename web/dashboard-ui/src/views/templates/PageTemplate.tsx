@@ -109,7 +109,6 @@ export const PageTemplate: React.FC<
   const eventDetailDialogDispatch = EventDetailDialogContext.useDispatch();
 
   useEffect(() => {
-    getMyEvents();
     watchMyEvents();
   }, [isSignIn]);
 
@@ -242,7 +241,11 @@ export const PageTemplate: React.FC<
               }}
               disabled={!isSignIn}
             >
-              <Badge badgeContent={newEventsCount} color="error">
+              <Badge
+                invisible={newEventsCount === 0}
+                variant="dot"
+                color="error"
+              >
                 <Notifications />
               </Badge>
             </IconButton>

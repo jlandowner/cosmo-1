@@ -1,4 +1,3 @@
-import { Timestamp } from "@bufbuild/protobuf";
 import { Info, Warning } from "@mui/icons-material";
 import { Chip, SxProps } from "@mui/material";
 import {
@@ -22,7 +21,6 @@ export type EventsDataGridProp = {
 export const EventsDataGrid: React.FC<EventsDataGridProp> = (
   { events, maxHeight, sx, dataGridProps, clock },
 ) => {
-  console.log("EventsDataGrid", events);
   const [now, setNow] = useState(new Date());
 
   const eventDetailDialogDispatch = EventDetailDialogContext.useDispatch();
@@ -36,9 +34,10 @@ export const EventsDataGrid: React.FC<EventsDataGridProp> = (
     {
       field: "eventTime",
       headerName: "LastSeen",
-      valueGetter: (value: Timestamp) => value.toDate(),
-      valueFormatter: (value?: Date) =>
-        value && formatTime(now.getTime() - value.getTime()),
+      valueGetter: (value, row: Event) =>
+        (row.series?.lastObservedTime || row.eventTime)?.toDate(),
+      valueFormatter: (value: Date) =>
+        formatTime(now.getTime() - value.getTime()),
       flex: 0.2,
       minWidth: 80,
     },

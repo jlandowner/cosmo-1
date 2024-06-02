@@ -8,7 +8,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
+import { Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { User, UserAddon } from "./user_pb.js";
 import { Event } from "./event_pb.js";
 
@@ -709,6 +709,11 @@ export class GetEventsRequest extends Message<GetEventsRequest> {
    */
   userName = "";
 
+  /**
+   * @generated from field: optional google.protobuf.Timestamp from = 2;
+   */
+  from?: Timestamp;
+
   constructor(data?: PartialMessage<GetEventsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -718,6 +723,7 @@ export class GetEventsRequest extends Message<GetEventsRequest> {
   static readonly typeName = "dashboard.v1alpha1.GetEventsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "user_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "from", kind: "message", T: Timestamp, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest {

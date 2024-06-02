@@ -61,29 +61,24 @@ const useLoginModule = () => {
       const index = myEvents.findIndex((e) => (e.id === event.id));
       if (index >= 0) {
         // replace event
-        console.log("!!! replace", event.id);
-        setMyEvents((prev) => {
-          prev[index] = event;
-          prev.sort((a, b) => latestTime(b) - latestTime(a));
-          return prev;
-        });
+        console.log("!!! replace", event.id, index);
+        myEvents[index] = event;
+        myEvents.sort((a, b) => latestTime(b) - latestTime(a));
+        setMyEvents(myEvents);
       } else {
         // put event on the top of event list
         console.log("!!! new", event.id);
-        setMyEvents((prev) => {
-          prev.push(event);
-          prev.sort((a, b) => latestTime(b) - latestTime(a));
-          return prev;
-        });
+        myEvents.push(event);
+        myEvents.sort((a, b) => latestTime(b) - latestTime(a));
+        setMyEvents(myEvents);
       }
     }
   };
 
   const watchMyEvents = async () => {
     if (isSignIn) {
-      let retryCount = 0;
-      const watchEvents = async () => {
-        console.log("watchEvents for user:", loginUser?.name);
+      const watchEvents = async (retryCount: number) => {
+        console.log("Start watching events...", loginUser?.name, retryCount);
         try {
           const result = await streamService.streamingEvents({
             userName: loginUser?.name,
@@ -100,15 +95,15 @@ const useLoginModule = () => {
             retryCount += 1;
             const waitTime = Math.floor(Math.random() * 5 + 1) * 1000;
             console.log("watch re-conntect after milisec", waitTime);
-            setTimeout(watchEvents, waitTime);
+            setTimeout(() => watchEvents(retryCount), waitTime);
           } else {
-            console.log("watch finished");
+            console.log("Reached retry limit for watching events");
           }
         }
       };
       if (!isWatching) {
         setIsWatching(true);
-        watchEvents();
+        watchEvents(0);
         setIsWatching(false);
       }
     }

@@ -55,7 +55,7 @@ export class Event extends Message<Event> {
   reportingController = "";
 
   /**
-   * @generated from field: optional dashboard.v1alpha1.EventSeries series = 9;
+   * @generated from field: dashboard.v1alpha1.EventSeries series = 9;
    */
   series?: EventSeries;
 
@@ -80,7 +80,7 @@ export class Event extends Message<Event> {
     { no: 6, name: "reason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "regarding", kind: "message", T: ObjectReference },
     { no: 8, name: "reportingController", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 9, name: "series", kind: "message", T: EventSeries, opt: true },
+    { no: 9, name: "series", kind: "message", T: EventSeries },
     { no: 10, name: "regardingWorkspace", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
