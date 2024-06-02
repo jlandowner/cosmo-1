@@ -56,6 +56,10 @@ func (m *Event) validate(all bool) error {
 
 	var errors []error
 
+	// no validation rules for Id
+
+	// no validation rules for User
+
 	if all {
 		switch v := interface{}(m.GetEventTime()).(type) {
 		case interface{ ValidateAll() error }:
@@ -153,6 +157,10 @@ func (m *Event) validate(all bool) error {
 			}
 		}
 
+	}
+
+	if m.RegardingWorkspace != nil {
+		// no validation rules for RegardingWorkspace
 	}
 
 	if len(errors) > 0 {

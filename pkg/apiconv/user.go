@@ -174,7 +174,16 @@ func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 			lastTime = timestamppb.New(v.DeprecatedLastTimestamp.Time)
 		}
 
+		var instName *string
+		if ann := v.GetAnnotations(); ann != nil {
+			// get instance name from annotation
+			if v := ann[cosmov1alpha1.EventAnnKeyInstanceName]; v != "" {
+				instName = &v
+			}
+		}
+
 		e := &dashv1alpha1.Event{
+			Id:        v.Name,
 			EventTime: eventTime,
 			Reason:    v.Reason,
 			Note:      v.Note,
@@ -186,6 +195,7 @@ func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 				Namespace:  v.Regarding.Namespace,
 			},
 			ReportingController: v.ReportingController,
+			RegardingWorkspace:  instName,
 		}
 		if count > 1 {
 			e.Series = &dashv1alpha1.EventSeries{

@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"k8s.io/utils/ptr"
 
 	"github.com/cosmo-workspace/cosmo/api/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
@@ -88,17 +87,16 @@ func (o *GetEventsOption) RunE(cmd *cobra.Command, args []string) error {
 }
 
 func (o *GetEventsOption) GetEventsWithDashClient(ctx context.Context) ([]*dashv1alpha1.Event, error) {
-	req := &dashv1alpha1.GetUserRequest{
+	req := &dashv1alpha1.GetEventsRequest{
 		UserName: o.UserName,
-		WithRaw:  ptr.To(true),
 	}
 	c := o.CosmoDashClient
-	res, err := c.UserServiceClient.GetUser(ctx, cli.NewRequestWithToken(req, o.CliConfig))
+	res, err := c.UserServiceClient.GetEvents(ctx, cli.NewRequestWithToken(req, o.CliConfig))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get events: %w", err)
 	}
 	o.Logr.DebugAll().Info("UserServiceClient.GetUser", "res", res)
-	return res.Msg.User.Events, nil
+	return res.Msg.Items, nil
 }
 
 func (o *GetEventsOption) OutputTable(w io.Writer, events []*dashv1alpha1.Event) {
