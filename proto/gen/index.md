@@ -225,7 +225,7 @@
 | reason | [string](#string) |  |  |
 | regarding | [ObjectReference](#dashboard-v1alpha1-ObjectReference) |  |  |
 | reportingController | [string](#string) |  |  |
-| series | [EventSeries](#dashboard-v1alpha1-EventSeries) | optional |  |
+| series | [EventSeries](#dashboard-v1alpha1-EventSeries) |  |  |
 | regardingWorkspace | [string](#string) | optional |  |
 
 
@@ -429,6 +429,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | user_name | [string](#string) |  |  |
+| from | [google.protobuf.Timestamp](#google-protobuf-Timestamp) | optional |  |
 
 
 

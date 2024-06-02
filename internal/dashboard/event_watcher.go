@@ -19,7 +19,6 @@ import (
 	"github.com/cosmo-workspace/cosmo/pkg/apiconv"
 	"github.com/cosmo-workspace/cosmo/pkg/clog"
 	"github.com/cosmo-workspace/cosmo/pkg/kosmo"
-	"github.com/cosmo-workspace/cosmo/pkg/kubeutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 	"github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1/dashboardv1alpha1connect"
 )
@@ -44,6 +43,29 @@ func (s *Server) StreamingEvents(ctx context.Context, req *connect_go.Request[da
 	ctx, cancel := context.WithTimeout(ctx, time.Second*300)
 	defer cancel()
 
+	events, err := s.Klient.ListEvents(ctx, cosmov1alpha1.UserNamespace(req.Msg.UserName))
+	if err != nil {
+		return ErrResponse(log, err)
+	}
+
+	for _, v := range events {
+		if req.Msg.From != nil {
+			events := make([]eventv1.Event, 0)
+			if _, last := apiconv.EventObservedTime(v); last.After(req.Msg.From.AsTime()) {
+				events = append(events, v)
+			}
+			if len(events) > 0 {
+				res := &dashv1alpha1.GetEventsResponse{
+					Items: apiconv.K2D_Events([]eventv1.Event{v}),
+				}
+				if err := stream.Send(res); err != nil {
+					log.Error(err, "send error")
+					return err
+				}
+			}
+		}
+	}
+
 	eventCh := s.watcher.subscribe(ctx, fmt.Sprintf("%x", key))
 	if eventCh == nil {
 		return fmt.Errorf("channel already exists")
@@ -57,7 +79,7 @@ func (s *Server) StreamingEvents(ctx context.Context, req *connect_go.Request[da
 		case event, ok := <-eventCh:
 			if ok {
 				log.Debug().Info("delegating event", "user", req.Msg.UserName)
-				if user := kubeutil.GetAnnotation(&event, cosmov1alpha1.EventAnnKeyUserName); user != req.Msg.UserName {
+				if event.Namespace != cosmov1alpha1.UserNamespace(req.Msg.UserName) {
 					continue
 				}
 				res := &dashv1alpha1.GetEventsResponse{
@@ -120,7 +142,7 @@ func (r *watcher) Reconcile(ctx context.Context, req reconcile.Request) (reconci
 	if err := r.Klient.Get(ctx, req.NamespacedName, &event); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if err := r.Klient.SetRegardingInstanceOnAnnotation(ctx, &event); err != nil {
+	if err := r.Klient.UpdateEventAnnotations(ctx, &event); err != nil {
 		log.Error(err, "failed to set regaining instance on event annotation")
 	}
 

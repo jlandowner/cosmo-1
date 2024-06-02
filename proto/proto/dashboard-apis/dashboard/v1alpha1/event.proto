@@ -18,7 +18,7 @@ message Event {
     string reason = 6;
     ObjectReference regarding = 7;
     string reportingController = 8;
-    optional EventSeries series = 9;
+    EventSeries series = 9;
     optional string regardingWorkspace = 10;
 }
 

@@ -49,7 +49,7 @@ func C2D_Workspace(ws cosmov1alpha1.Workspace, opts ...WorkspaceConvertOptions) 
 			MainUrl: ws.Status.URLs[cosmov1alpha1.MainRuleKey(ws.Status.Config)],
 		},
 	}
-	
+
 	t, err := time.Parse(time.RFC3339, kubeutil.GetAnnotation(&ws, cosmov1alpha1.WorkspaceAnnKeyLastStartedAt))
 	if err == nil {
 		d.Status.LastStartedAt = timestamppb.New(t)

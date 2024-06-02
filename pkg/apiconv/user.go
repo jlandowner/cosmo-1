@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 	eventsv1 "k8s.io/api/events/v1"
@@ -153,27 +154,6 @@ func D2S_UserAddons(addons []*dashv1alpha1.UserAddon) []string {
 func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 	es := make([]*dashv1alpha1.Event, len(events))
 	for i, v := range events {
-		var eventTime *timestamppb.Timestamp
-		if v.EventTime.Year() != 1 {
-			eventTime = timestamppb.New(v.EventTime.Time)
-		} else {
-			eventTime = timestamppb.New(v.DeprecatedLastTimestamp.Time)
-		}
-
-		var count int32
-		if v.Series != nil {
-			count = v.Series.Count
-		} else {
-			count = v.DeprecatedCount
-		}
-
-		var lastTime *timestamppb.Timestamp
-		if v.Series != nil {
-			lastTime = timestamppb.New(v.Series.LastObservedTime.Time)
-		} else {
-			lastTime = timestamppb.New(v.DeprecatedLastTimestamp.Time)
-		}
-
 		var instName *string
 		if ann := v.GetAnnotations(); ann != nil {
 			// get instance name from annotation
@@ -182,9 +162,11 @@ func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 			}
 		}
 
+		first, last := EventObservedTime(v)
+
 		e := &dashv1alpha1.Event{
 			Id:        v.Name,
-			EventTime: eventTime,
+			EventTime: timestamppb.New(first),
 			Reason:    v.Reason,
 			Note:      v.Note,
 			Type:      v.Type,
@@ -196,14 +178,37 @@ func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 			},
 			ReportingController: v.ReportingController,
 			RegardingWorkspace:  instName,
-		}
-		if count > 1 {
-			e.Series = &dashv1alpha1.EventSeries{
-				Count:            count,
-				LastObservedTime: lastTime,
-			}
+			Series: &dashv1alpha1.EventSeries{
+				Count:            EventCount(v),
+				LastObservedTime: timestamppb.New(last),
+			},
 		}
 		es[i] = e
 	}
 	return es
+}
+
+func EventCount(v eventsv1.Event) int32 {
+	if v.Series != nil {
+		return v.Series.Count
+	} else {
+		return v.DeprecatedCount
+	}
+}
+
+func EventObservedTime(v eventsv1.Event) (first time.Time, last time.Time) {
+	if v.EventTime.Year() != 1 {
+		first = v.EventTime.Time
+	} else {
+		first = v.DeprecatedFirstTimestamp.Time
+	}
+	if v.Series != nil {
+		last = v.Series.LastObservedTime.Time
+	} else {
+		last = v.DeprecatedLastTimestamp.Time
+	}
+	if last.Before(first) {
+		return first, first
+	}
+	return first, last
 }

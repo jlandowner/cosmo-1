@@ -11,6 +11,8 @@ import "dashboard/v1alpha1/user.proto";
 import "dashboard/v1alpha1/event.proto";
 import "validate/validate.proto";
 
+import "google/protobuf/timestamp.proto";
+
 service UserService {
   // Delete user by ID
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
@@ -116,6 +118,7 @@ message UpdateUserAddonsResponse {
 
 message GetEventsRequest {
   string user_name = 1;
+  optional google.protobuf.Timestamp from = 2;
 }
 
 message GetEventsResponse {
