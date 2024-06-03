@@ -11,6 +11,7 @@ import (
 	eventsv1 "k8s.io/api/events/v1"
 
 	cosmov1alpha1 "github.com/cosmo-workspace/cosmo/api/v1alpha1"
+	"github.com/cosmo-workspace/cosmo/pkg/kubeutil"
 	dashv1alpha1 "github.com/cosmo-workspace/cosmo/proto/gen/dashboard/v1alpha1"
 )
 
@@ -154,18 +155,21 @@ func D2S_UserAddons(addons []*dashv1alpha1.UserAddon) []string {
 func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 	es := make([]*dashv1alpha1.Event, len(events))
 	for i, v := range events {
-		var instName *string
-		if ann := v.GetAnnotations(); ann != nil {
-			// get instance name from annotation
-			if v := ann[cosmov1alpha1.EventAnnKeyInstanceName]; v != "" {
-				instName = &v
-			}
+		first, last := EventObservedTime(v)
+
+		userName := kubeutil.GetAnnotation(&v, cosmov1alpha1.EventAnnKeyUserName)
+		if userName == "" {
+			userName = cosmov1alpha1.UserNameByNamespace(v.Namespace)
 		}
 
-		first, last := EventObservedTime(v)
+		var wsName *string
+		if instName := kubeutil.GetAnnotation(&v, cosmov1alpha1.EventAnnKeyInstanceName); instName != "" {
+			wsName = &instName
+		}
 
 		e := &dashv1alpha1.Event{
 			Id:        v.Name,
+			User:      userName,
 			EventTime: timestamppb.New(first),
 			Reason:    v.Reason,
 			Note:      v.Note,
@@ -177,7 +181,7 @@ func K2D_Events(events []eventsv1.Event) []*dashv1alpha1.Event {
 				Namespace:  v.Regarding.Namespace,
 			},
 			ReportingController: v.ReportingController,
-			RegardingWorkspace:  instName,
+			RegardingWorkspace:  wsName,
 			Series: &dashv1alpha1.EventSeries{
 				Count:            EventCount(v),
 				LastObservedTime: timestamppb.New(last),
